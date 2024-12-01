@@ -10,8 +10,9 @@ from config import Config
 from internal.router import Router
 from internal.server import Http
 
+load_dotenv()
+
 app = Http(__name__, router=Injector().get(Router), config=Config())
 
 if __name__ == "__main__":
-    load_dotenv()
     app.run(debug=True, host="0.0.0.0", port=8000)
