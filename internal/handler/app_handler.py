@@ -7,6 +7,8 @@ from flask import request
 from openai import OpenAI
 import os
 
+from internal.schema.app_schema import CompletionReq
+
 
 class AppHandler:
     def ping(self):
@@ -14,6 +16,9 @@ class AppHandler:
 
     def completion(self):
         """聊天接口"""
+        req = CompletionReq()
+        if not req.validate():
+            return req.errors
         query = request.json.get("query")
 
         client = OpenAI(

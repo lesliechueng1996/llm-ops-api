@@ -6,10 +6,11 @@
 from injector import Injector
 from dotenv import load_dotenv
 
+from config import Config
 from internal.router import Router
 from internal.server import Http
 
-app = Http(__name__, router=Injector().get(Router))
+app = Http(__name__, router=Injector().get(Router), config=Config())
 
 if __name__ == "__main__":
     load_dotenv()
