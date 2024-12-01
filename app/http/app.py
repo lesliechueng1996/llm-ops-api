@@ -3,16 +3,20 @@
 @Author : Leslie
 @File   : app.py
 """
+from flask_sqlalchemy import SQLAlchemy
 from injector import Injector
 from dotenv import load_dotenv
 
+from .module import ExtensionModule
 from config import Config
 from internal.router import Router
 from internal.server import Http
 
 load_dotenv()
 
-app = Http(__name__, router=Injector().get(Router), config=Config())
+injector = Injector([ExtensionModule])
+
+app = Http(__name__, router=injector.get(Router), config=Config(), db=injector.get(SQLAlchemy))
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8000)
