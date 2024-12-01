@@ -10,7 +10,7 @@ from internal.exception import CustomException
 from internal.router import Router
 from config import Config
 from pkg.response import json, Response, HttpCode
-
+from internal.model import App
 
 class Http(Flask):
     def __init__(self, *args, router: Router, config: Config, db: SQLAlchemy, **kwargs):
@@ -19,6 +19,9 @@ class Http(Flask):
         self.config.from_object(config)
         self.register_error_handler(Exception, self._error_handler)
         db.init_app(self)
+        with self.app_context():
+            _ = App()
+            db.create_all()
 
     def _error_handler(self, error: Exception):
         if isinstance(error, CustomException):
