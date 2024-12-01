@@ -7,13 +7,14 @@ from flask import request
 from openai import OpenAI
 import os
 
+from internal.exception import FailException
 from internal.schema.app_schema import CompletionReq
 from pkg.response import validate_error_json, success_json
 
 
 class AppHandler:
     def ping(self):
-        return {"ping": "pong"}
+        raise FailException(message="异常")
 
     def completion(self):
         """聊天接口"""
