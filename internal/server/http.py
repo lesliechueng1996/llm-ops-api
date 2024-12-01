@@ -12,18 +12,28 @@ from internal.router import Router
 from config import Config
 from pkg.response import json, Response, HttpCode
 from internal.model import App
+from flask_migrate import Migrate
 
 
 class Http(Flask):
-    def __init__(self, *args, router: Router, config: Config, db: SQLAlchemy, **kwargs):
+    def __init__(
+        self,
+        *args,
+        router: Router,
+        config: Config,
+        db: SQLAlchemy,
+        migrate: Migrate,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         router.register_router(self)
         self.config.from_object(config)
         self.register_error_handler(Exception, self._error_handler)
         db.init_app(self)
-        with self.app_context():
-            _ = App()
-            db.create_all()
+        migrate.init_app(self, db, directory="internal/migration")
+        # with self.app_context():
+        #     _ = App()
+        #     db.create_all()
 
     def _error_handler(self, error: Exception):
         if isinstance(error, CustomException):

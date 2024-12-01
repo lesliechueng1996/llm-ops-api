@@ -3,6 +3,7 @@
 @Author : Leslie
 @File   : app.py
 """
+
 from sqlalchemy import (
     PrimaryKeyConstraint,
     Column,
@@ -16,8 +17,10 @@ from uuid import uuid4
 from datetime import datetime
 from internal.extension.database_extension import db
 
+
 class App(db.Model):
     """AI应用模型"""
+
     __tablename__ = "app"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_app_id"),
@@ -29,5 +32,8 @@ class App(db.Model):
     name = Column(String(255), default="", nullable=False)
     icon = Column(String(255), default="", nullable=False)
     description = Column(Text, default="", nullable=False)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    status = Column(String(255), default="", nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.now, onupdate=datetime.now, nullable=False
+    )
     created_at = Column(DateTime, default=datetime.now, nullable=False)

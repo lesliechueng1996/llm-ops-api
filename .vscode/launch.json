@@ -24,7 +24,35 @@
       "name": "Run pipreqs command",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/run_pipreqs.py",
+      "program": "${workspaceFolder}/command/run_pipreqs.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run db init command",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/command/db_init.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run db migrate command",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/command/db_migrate.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run db upgrade command",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/command/db_upgrade.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run db downgrade command",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/command/db_downgrade.py",
       "console": "integratedTerminal"
     }
   ]
