@@ -45,8 +45,11 @@ class AppHandler:
         # 构建解析器
         str_parser = StrOutputParser()
 
+        # 构建链
+        chain = prompt | client | str_parser
+
         # 获取 AI 完成的内容
-        content = str_parser.invoke(client.invoke(prompt.invoke({"query": query})))
+        content = chain.invoke({"query": query})
 
         return success_json({"content": content})
 
