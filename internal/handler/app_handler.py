@@ -26,7 +26,7 @@ class AppHandler:
     def ping(self):
         raise FailException(message="异常")
 
-    def completion(self):
+    def debug(self, app_id: UUID):
         """聊天接口"""
         req = CompletionReq()
         if not req.validate():
