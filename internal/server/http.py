@@ -11,8 +11,8 @@ from internal.exception import CustomException
 from internal.router import Router
 from config import Config
 from pkg.response import json, Response, HttpCode
-from internal.model import App
 from flask_migrate import Migrate
+from flask_cors import CORS
 
 
 class Http(Flask):
@@ -30,6 +30,21 @@ class Http(Flask):
         self.config.from_object(config)
         self.register_error_handler(Exception, self._error_handler)
         db.init_app(self)
+        CORS(
+            self,
+            resources={
+                r"/*": {
+                    "origins": "*",
+                    "supports_credentials": True,
+                    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                    "allow_headers": [
+                        "Content-Type",
+                        "Authorization",
+                        "Access-Control-Allow-Origin",
+                    ],
+                }
+            },
+        )
         migrate.init_app(self, db, directory="internal/migration")
         # with self.app_context():
         #     _ = App()
