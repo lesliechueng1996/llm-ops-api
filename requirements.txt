@@ -5,9 +5,12 @@ Flask_Migrate==4.0.7
 flask_sqlalchemy==3.1.1
 flask_wtf==1.2.2
 injector==0.22.0
+langchain==0.3.9
 langchain_community==0.3.9
 langchain_core==0.3.21
+openai==1.56.2
 pydantic==2.10.3
 pytest==8.3.4
 python-dotenv==1.0.1
+tiktoken==0.8.0
 WTForms==3.2.1
