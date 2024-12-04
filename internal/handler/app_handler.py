@@ -13,9 +13,13 @@ from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
 from dataclasses import dataclass
 from uuid import UUID
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_models.moonshot import MoonshotChat
 from langchain_core.output_parsers.string import StrOutputParser
+from langchain_community.chat_message_histories import FileChatMessageHistory
+from langchain.memory import ConversationBufferWindowMemory
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from operator import itemgetter
 
 
 @inject
@@ -34,22 +38,45 @@ class AppHandler:
         query = request.json.get("query")
 
         # 构建 prompt
-        prompt = ChatPromptTemplate.from_template("{query}")
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", "你是一个强大的聊天机器人，能根据用户的提问回复对应的问题"),
+                MessagesPlaceholder("history"),
+                ("human", "{query}"),
+            ]
+        )
 
         # 构建 Moonshot AI 客户端
         client = MoonshotChat(
             moonshot_api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_URL"),
         )
+        memory = ConversationBufferWindowMemory(
+            k=3,
+            chat_memory=FileChatMessageHistory("./storage/memory/chat_history.txt"),
+            return_messages=True,
+        )
 
         # 构建解析器
         str_parser = StrOutputParser()
 
         # 构建链
-        chain = prompt | client | str_parser
+        chain = (
+            RunnablePassthrough.assign(
+                history=RunnableLambda(memory.load_memory_variables)
+                | itemgetter(memory.memory_key)
+            )
+            | prompt
+            | client
+            | str_parser
+        )
+
+        human_input = {"query": query}
 
         # 获取 AI 完成的内容
-        content = chain.invoke({"query": query})
+        content = chain.invoke(human_input)
+
+        memory.save_context(human_input, {"output": content})
 
         return success_json({"content": content})
 
