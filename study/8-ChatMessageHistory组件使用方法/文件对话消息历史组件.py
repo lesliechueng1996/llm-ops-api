@@ -6,7 +6,9 @@ from langchain_community.chat_message_histories import FileChatMessageHistory
 load_dotenv()
 
 client = OpenAI(api_key=getenv("OPENAI_API_KEY"), base_url=getenv("OPENAI_URL"))
-chat_history = FileChatMessageHistory("./memory.txt")
+chat_history = FileChatMessageHistory(
+    "./study/8-ChatMessageHistory组件使用方法/memory.txt"
+)
 
 while True:
     query = input("Human: ")
