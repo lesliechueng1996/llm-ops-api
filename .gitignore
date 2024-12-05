@@ -7,3 +7,4 @@ __pycache__
 *.bkp
 embeddings
 .cache
+vector-store
