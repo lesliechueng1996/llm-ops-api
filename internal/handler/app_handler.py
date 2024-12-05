@@ -4,6 +4,7 @@
 @File   : app_handler.py
 """
 
+from typing import Any
 from flask import request
 import os
 from internal.exception import FailException
@@ -18,8 +19,10 @@ from langchain_community.chat_models.moonshot import MoonshotChat
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_community.chat_message_histories import FileChatMessageHistory
 from langchain.memory import ConversationBufferWindowMemory
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.memory import BaseMemory
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableConfig
 from operator import itemgetter
+from langchain_core.tracers.schemas import Run
 
 
 @inject
@@ -29,6 +32,21 @@ class AppHandler:
 
     def ping(self):
         raise FailException(message="异常")
+
+    @classmethod
+    def _load_memory_variables(cls, input: dict[str, Any], config: RunnableConfig):
+        configurable = config.get("configurable", {})
+        memory = configurable.get("memory")
+        if memory is not None and isinstance(memory, BaseMemory):
+            return memory.load_memory_variables(input)
+        return {"history": []}
+
+    @classmethod
+    def _save_context(cls, run_obj: Run, config: RunnableConfig):
+        configurable = config.get("configurable", {})
+        memory = configurable.get("memory")
+        if memory is not None and isinstance(memory, BaseMemory):
+            memory.save_context(run_obj.inputs, run_obj.outputs)
 
     def debug(self, app_id: UUID):
         """聊天接口"""
@@ -63,20 +81,25 @@ class AppHandler:
         # 构建链
         chain = (
             RunnablePassthrough.assign(
-                history=RunnableLambda(memory.load_memory_variables)
+                history=RunnableLambda(self._load_memory_variables)
                 | itemgetter(memory.memory_key)
             )
             | prompt
             | client
             | str_parser
-        )
+        ).with_listeners(on_end=self._save_context)
 
         human_input = {"query": query}
 
         # 获取 AI 完成的内容
-        content = chain.invoke(human_input)
-
-        memory.save_context(human_input, {"output": content})
+        content = chain.invoke(
+            human_input,
+            config={
+                "configurable": {
+                    "memory": memory,
+                }
+            },
+        )
 
         return success_json({"content": content})
 
