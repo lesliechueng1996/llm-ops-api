@@ -5,5 +5,6 @@
 """
 
 from .app_service import AppService
+from .vector_store_service import VectorStoreService
 
-__all__ = ["AppService"]
+__all__ = ["AppService", "VectorStoreService"]

@@ -9,7 +9,7 @@ from flask import request
 import os
 from internal.exception import FailException
 from internal.schema.app_schema import CompletionReq
-from internal.service import AppService
+from internal.service import AppService, VectorStoreService
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ from langchain_core.tracers.schemas import Run
 @dataclass
 class AppHandler:
     app_service: AppService
+    vector_store_service: VectorStoreService
 
     def ping(self):
         raise FailException(message="异常")
@@ -56,9 +57,10 @@ class AppHandler:
         query = request.json.get("query")
 
         # 构建 prompt
+        system_prompt = "你是一个强大的聊天机器人，能根据对应的上下文和历史对话信息回复用户问题。\n\n<context>{context}</context>"
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", "你是一个强大的聊天机器人，能根据用户的提问回复对应的问题"),
+                ("system", system_prompt),
                 MessagesPlaceholder("history"),
                 ("human", "{query}"),
             ]
@@ -78,11 +80,16 @@ class AppHandler:
         # 构建解析器
         str_parser = StrOutputParser()
 
+        retriever = (
+            self.vector_store_service.get_retriever()
+            | self.vector_store_service.combine_documents
+        )
         # 构建链
         chain = (
             RunnablePassthrough.assign(
+                context=itemgetter("query") | retriever,
                 history=RunnableLambda(self._load_memory_variables)
-                | itemgetter(memory.memory_key)
+                | itemgetter(memory.memory_key),
             )
             | prompt
             | client
