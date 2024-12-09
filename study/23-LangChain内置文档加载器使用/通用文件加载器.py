@@ -1,6 +1,7 @@
-from langchain_unstructured.document_loaders import UnstructuredLoader
+# from langchain_unstructured.document_loaders import UnstructuredLoader
+from langchain_community.document_loaders import UnstructuredFileLoader
 
-loader = UnstructuredLoader("./study/23-LangChain内置文档加载器使用/章节介绍.pptx")
+loader = UnstructuredFileLoader("./study/23-LangChain内置文档加载器使用/章节介绍.pptx")
 
 docs = loader.load()
 
