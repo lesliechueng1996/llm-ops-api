@@ -5,7 +5,9 @@ import weaviate
 from weaviate.classes.init import Auth
 from dotenv import load_dotenv
 from os import getenv
-from langchain_community.embeddings import QianfanEmbeddingsEndpoint
+
+# from langchain_community.embeddings import QianfanEmbeddingsEndpoint
+from langchain_openai.embeddings import OpenAIEmbeddings
 
 load_dotenv()
 
@@ -32,11 +34,15 @@ client = weaviate.connect_to_weaviate_cloud(
 vector_store = WeaviateVectorStore(
     client=client,
     text_key="text",
-    embedding=QianfanEmbeddingsEndpoint(),
+    embedding=OpenAIEmbeddings(
+        api_key=getenv("OPENAI_KEY"),
+        base_url=getenv("OPENAI_API_URL"),
+        model="text-embedding-3-small",
+    ),
     index_name="DatasetDemo",
 )
 
-# vector_store.add_documents(chunks)
+vector_store.add_documents(chunks)
 
 # results = vector_store.similarity_search("关于配置接口的信息有哪些")
 
