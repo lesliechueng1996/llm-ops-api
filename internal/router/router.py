@@ -40,6 +40,10 @@ class Router:
 
         # built-in tools
         bp.add_url_rule(
+            "/builtin-tools/categories",
+            view_func=self.builtin_tool_handler.get_builtin_tools_categories,
+        )
+        bp.add_url_rule(
             "/builtin-tools", view_func=self.builtin_tool_handler.get_builtin_tools
         )
         bp.add_url_rule(

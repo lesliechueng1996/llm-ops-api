@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
+from internal.core.tools.builtin_tools.categories import BuiltinCategoryManager
 from internal.exception import NotFoundException
 
 
@@ -17,6 +18,18 @@ from internal.exception import NotFoundException
 @dataclass
 class BuiltinToolService:
     builtin_provider_manager: BuiltinProviderManager
+    builtin_category_manager: BuiltinCategoryManager
+
+    def get_builtin_tools_categories(self):
+        categories = self.builtin_category_manager.category_map.values()
+        return [
+            {
+                "category": category["entity"].category,
+                "name": category["entity"].name,
+                "icon": category["icon"],
+            }
+            for category in categories
+        ]
 
     def get_builtin_tools(self) -> list:
         results = []

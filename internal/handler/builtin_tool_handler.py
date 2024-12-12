@@ -16,6 +16,10 @@ class BuiltinToolHandler:
 
     builtin_tool_service: BuiltinToolService
 
+    def get_builtin_tools_categories(self):
+        results = self.builtin_tool_service.get_builtin_tools_categories()
+        return success_json(results)
+
     def get_builtin_tools(self):
         results = self.builtin_tool_service.get_builtin_tools()
         return success_json(results)

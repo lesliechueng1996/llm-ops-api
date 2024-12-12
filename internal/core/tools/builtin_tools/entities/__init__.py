@@ -5,5 +5,6 @@
 """
 
 from .provider_entity import Provider, ProviderEntity
+from .category_entity import CategoryEntity
 
-__all__ = ["Provider", "ProviderEntity"]
+__all__ = ["Provider", "ProviderEntity", "CategoryEntity"]
