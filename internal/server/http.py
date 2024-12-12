@@ -6,7 +6,7 @@
 
 from flask import Flask
 from pkg.sqlalchemy import SQLAlchemy
-
+import traceback
 from internal.exception import CustomException
 from internal.router import Router
 from config import Config
@@ -51,6 +51,7 @@ class Http(Flask):
         #     db.create_all()
 
     def _error_handler(self, error: Exception):
+        traceback.print_exception(error)
         if isinstance(error, CustomException):
             return json(
                 Response(
