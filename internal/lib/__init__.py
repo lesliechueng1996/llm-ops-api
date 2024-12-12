@@ -4,6 +4,6 @@
 @File   : __init__.py
 """
 
-from .helper import dynamic_import
+from .helper import dynamic_import, add_attribute
 
-__all__ = ["dynamic_import"]
+__all__ = ["dynamic_import", "add_attribute"]

@@ -11,6 +11,8 @@ from typing import Type
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
 
+from internal.lib.helper import add_attribute
+
 
 class GaodeWeatherArgsSchema(BaseModel):
     city: str = Field(description="需要查询天气预报的目标城市，例如：北京")
@@ -53,5 +55,6 @@ class GaodeWeatherTool(BaseTool):
             return f"获取{city}天气预报信息失败"
 
 
+@add_attribute("args_schema", GaodeWeatherArgsSchema)
 def gaode_weather(**kwargs) -> BaseTool:
     return GaodeWeatherTool()

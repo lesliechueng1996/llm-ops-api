@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from flask import Flask, Blueprint
 from injector import inject
 
-from internal.handler import AppHandler
+from internal.handler import AppHandler, BuiltinToolHandler
 
 
 @inject
@@ -17,6 +17,7 @@ class Router:
     """路由"""
 
     app_handler: AppHandler
+    builtin_tool_handler: BuiltinToolHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -36,5 +37,14 @@ class Router:
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["DELETE"], view_func=self.app_handler.delete_app
         # )
+
+        # built-in tools
+        bp.add_url_rule(
+            "/builtin-tools", view_func=self.builtin_tool_handler.get_builtin_tools
+        )
+        bp.add_url_rule(
+            "/builtin-tools/<string:provider_name>/tools/<string:tool_name>",
+            view_func=self.builtin_tool_handler.get_provider_tool,
+        )
 
         app.register_blueprint(bp)

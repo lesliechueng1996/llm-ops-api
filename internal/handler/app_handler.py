@@ -7,8 +7,6 @@
 from typing import Any
 from flask import request
 import os
-from internal.core.tools.builtin_tools.providers import ProviderFactory
-from internal.exception import FailException
 from internal.schema.app_schema import CompletionReq
 from internal.service import AppService, VectorStoreService
 from pkg.response import validate_error_json, success_json, success_message
@@ -31,12 +29,8 @@ from langchain_core.tracers.schemas import Run
 class AppHandler:
     app_service: AppService
     vector_store_service: VectorStoreService
-    provider_factory: ProviderFactory
 
     def ping(self):
-        tool = self.provider_factory.get_tool("wikipedia", "wikipedia_search")()
-        result = tool.invoke("沈阳市在哪")
-        print(result)
         return success_message("pong")
 
     @classmethod

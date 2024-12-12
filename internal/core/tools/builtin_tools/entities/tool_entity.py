@@ -19,7 +19,7 @@ class ToolParamType(str, Enum):
 class ToolParamEntity(BaseModel):
     name: str
     label: str
-    description: Optional[str] = None
+    help: Optional[str] = None
     type: ToolParamType
     default: Optional[Any] = None
     required: bool = False

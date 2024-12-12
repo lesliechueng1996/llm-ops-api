@@ -4,6 +4,6 @@
 @File   : __init__.py
 """
 
-from .provider_factory import ProviderFactory
+from .builtin_provider_manager import BuiltinProviderManager
 
-__all__ = ["ProviderFactory"]
+__all__ = ["BuiltinProviderManager"]

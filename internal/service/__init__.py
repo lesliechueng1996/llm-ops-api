@@ -6,5 +6,6 @@
 
 from .app_service import AppService
 from .vector_store_service import VectorStoreService
+from .builtin_tool_service import BuiltinToolService
 
-__all__ = ["AppService", "VectorStoreService"]
+__all__ = ["AppService", "VectorStoreService", "BuiltinToolService"]

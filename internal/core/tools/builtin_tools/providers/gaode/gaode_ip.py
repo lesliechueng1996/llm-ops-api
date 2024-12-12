@@ -11,11 +11,14 @@ from typing import Type
 
 import requests
 
+from internal.lib.helper import add_attribute
+
 
 class GaodeIPArgsSchema(BaseModel):
     ip: str = Field(description="需要查询所在地的IP地址，例如：114.247.50.2")
 
 
+@add_attribute("args_schema", GaodeIPArgsSchema)
 class GaodeIPTool(BaseTool):
     name: str = "gaode_ip"
     description: str = "当你想查询ip所在地址的问题时可以使用的工具"

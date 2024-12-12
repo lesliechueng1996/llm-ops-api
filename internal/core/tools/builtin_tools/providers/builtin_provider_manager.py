@@ -15,7 +15,7 @@ from typing import Callable
 
 @inject
 @singleton
-class ProviderFactory(BaseModel):
+class BuiltinProviderManager(BaseModel):
     provider_map: dict[str, Provider] = Field(default_factory=dict)
 
     def __init__(self, **kwargs):
