@@ -4,14 +4,17 @@
 @File   : builtin_tool_service.py
 """
 
+from flask import current_app
 from injector import inject
 from dataclasses import dataclass
+from os import path
 
 from pydantic import BaseModel
 
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
 from internal.core.tools.builtin_tools.categories import BuiltinCategoryManager
 from internal.exception import NotFoundException
+import mimetypes
 
 
 @inject
@@ -68,6 +71,33 @@ class BuiltinToolService:
             "created_at": provider_entity.created_at,
             "inputs": inputs,
         }
+
+    def get_provider_icon(self, provider_name: str):
+        provider = self.builtin_provider_manager.get_provider(provider_name)
+        if provider is None:
+            raise NotFoundException(f"该提供商{provider_name}不存在")
+
+        root_path = path.dirname(path.dirname(current_app.root_path))
+        icon_path = path.join(
+            root_path,
+            "internal",
+            "core",
+            "tools",
+            "builtin_tools",
+            "providers",
+            provider_name,
+            "_asset",
+            provider.provider_entity.icon,
+        )
+        if not path.exists(icon_path):
+            raise NotFoundException(f"该提供商{provider_name}图标不存在")
+
+        mimetype = mimetypes.guess_type(icon_path)[0] or "application/octet-stream"
+
+        with open(icon_path, "rb") as f:
+            icon_data = f.read()
+
+        return icon_data, mimetype
 
     @classmethod
     def _get_input_from_tool(cls, tool_func) -> dict:
