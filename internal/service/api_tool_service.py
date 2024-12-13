@@ -8,7 +8,7 @@ import json
 from injector import inject
 from dataclasses import dataclass
 from internal.exception import ValidateErrorException, NotFoundException
-from internal.core.tools.api_tools.entities import OpenAPISchema
+from internal.core.tools.api_tools.entities import OpenAPISchema, ToolEntity
 from internal.schema import (
     CreateAPIToolsSchemaReq,
     GetToolsPaginationSchemaReq,
@@ -18,12 +18,14 @@ from pkg.sqlalchemy import SQLAlchemy
 from internal.model import ApiToolProvider, ApiTool
 from pkg.pagination import Paginator
 from sqlalchemy import desc
+from internal.core.tools.api_tools.providers import ApiProviderManger
 
 
 @inject
 @dataclass
 class ApiToolService:
     db: SQLAlchemy
+    api_provider_manager: ApiProviderManger
 
     def validate_openapi_schema(self, openapi_schema_str: str):
         try:
@@ -191,3 +193,18 @@ class ApiToolService:
                         )
                     )
             self.db.session.add_all(tools)
+
+    def invoke_api_tool(self, provider_id: str, tool_name: str):
+        tool = self.get_api_tool(provider_id, tool_name)
+        provider = self.get_api_tools_provider(provider_id)
+        tool_entity = ToolEntity(
+            provider_id=provider_id,
+            name=tool.name,
+            url=tool.url,
+            method=tool.method,
+            description=tool.description,
+            headers=provider.headers,
+            parameters=tool.parameters,
+        )
+        tool_func = self.api_provider_manager.get_tool(tool_entity=tool_entity)
+        return tool_func.invoke({"q": "love", "doctype": "json"})

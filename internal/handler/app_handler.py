@@ -8,7 +8,7 @@ from typing import Any
 from flask import request
 import os
 from internal.schema import CompletionReq
-from internal.service import AppService, VectorStoreService
+from internal.service import AppService, VectorStoreService, ApiToolService
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
 from dataclasses import dataclass
@@ -29,8 +29,14 @@ from langchain_core.tracers.schemas import Run
 class AppHandler:
     app_service: AppService
     vector_store_service: VectorStoreService
+    api_tool_service: ApiToolService
 
     def ping(self):
+        print(
+            self.api_tool_service.invoke_api_tool(
+                "9004b3e6-3352-42a5-afc2-0f31aa64db89", "Lalala"
+            )
+        )
         return success_message("pong")
 
     @classmethod

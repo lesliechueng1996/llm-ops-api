@@ -4,6 +4,7 @@
 @File   : __init__.py
 """
 
-from .openapi_schema import OpenAPISchema
+from .openapi_schema import OpenAPISchema, ParameterTypeMap, ParameterIn
+from .tool_entity import ToolEntity
 
-__all__ = ["OpenAPISchema"]
+__all__ = ["OpenAPISchema", "ToolEntity", "ParameterTypeMap", "ParameterIn"]

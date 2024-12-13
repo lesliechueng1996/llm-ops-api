@@ -24,6 +24,14 @@ class ParameterType(str, Enum):
     BOOL = "bool"
 
 
+ParameterTypeMap = {
+    ParameterType.STR: str,
+    ParameterType.INT: int,
+    ParameterType.FLOAT: float,
+    ParameterType.BOOL: bool,
+}
+
+
 class OpenAPISchema(BaseModel):
     server: str = Field(
         default="", description="工具提供者的服务基础地址", validate_default=True
