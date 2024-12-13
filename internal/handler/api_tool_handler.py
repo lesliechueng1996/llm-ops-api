@@ -6,7 +6,7 @@
 
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import ValidationOpenAPISchemaReq
+from internal.schema import ValidationOpenAPISchemaReq, CreateAPIToolsSchemaReq
 from internal.service import ApiToolService
 from pkg.response import validate_error_json, success_message
 
@@ -23,3 +23,11 @@ class ApiToolHandler:
 
         self.api_tool_service.validate_openapi_schema(req.openapi_schema.data)
         return success_message("openapi schema验证通过")
+
+    def create_api_tools(self):
+        req = CreateAPIToolsSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        self.api_tool_service.create_api_tools(req)
+        return success_message("创建api tools成功")
