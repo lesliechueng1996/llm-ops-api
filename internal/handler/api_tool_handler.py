@@ -47,3 +47,7 @@ class ApiToolHandler:
         api_tool = self.api_tool_service.get_api_tool(provider_id, tool_name)
         res_schema = GetAPIToolSchemaRes()
         return success_json(res_schema.dump(api_tool))
+
+    def delete_api_tool_provider(self, provider_id: UUID):
+        self.api_tool_service.delete_api_tool_provider(provider_id)
+        return success_message("删除api tool provider成功")

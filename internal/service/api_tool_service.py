@@ -110,3 +110,15 @@ class ApiToolService:
             raise NotFoundException("工具不存在")
 
         return tool
+
+    def delete_api_tool_provider(self, provider_id: str):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        with self.db.auto_commit():
+            self.db.session.query(ApiToolProvider).filter_by(
+                id=provider_id, account_id=account_id
+            ).delete()
+            self.db.session.query(ApiTool).filter_by(
+                provider_id=provider_id, account_id=account_id
+            ).delete()
+        return
