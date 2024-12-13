@@ -4,11 +4,16 @@
 @File   : api_tool_handler.py
 """
 
+from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import ValidationOpenAPISchemaReq, CreateAPIToolsSchemaReq
+from internal.schema import (
+    ValidationOpenAPISchemaReq,
+    CreateAPIToolsSchemaReq,
+    GetAPIToolsProviderSchemaRes,
+)
 from internal.service import ApiToolService
-from pkg.response import validate_error_json, success_message
+from pkg.response import validate_error_json, success_message, success_json
 
 
 @inject
@@ -31,3 +36,8 @@ class ApiToolHandler:
 
         self.api_tool_service.create_api_tools(req)
         return success_message("创建api tools成功")
+
+    def get_api_tools_provider(self, provider_id: UUID):
+        provider = self.api_tool_service.get_api_tools_provider(provider_id)
+        res_schema = GetAPIToolsProviderSchemaRes()
+        return success_json(res_schema.dump(provider))

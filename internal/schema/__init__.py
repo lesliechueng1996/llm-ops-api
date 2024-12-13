@@ -5,6 +5,15 @@
 """
 
 from .app_schema import CompletionReq
-from .api_tool_schema import ValidationOpenAPISchemaReq, CreateAPIToolsSchemaReq
+from .api_tool_schema import (
+    ValidationOpenAPISchemaReq,
+    CreateAPIToolsSchemaReq,
+    GetAPIToolsProviderSchemaRes,
+)
 
-__all__ = ["CompletionReq", "ValidationOpenAPISchemaReq", "CreateAPIToolsSchemaReq"]
+__all__ = [
+    "CompletionReq",
+    "ValidationOpenAPISchemaReq",
+    "CreateAPIToolsSchemaReq",
+    "GetAPIToolsProviderSchemaRes",
+]

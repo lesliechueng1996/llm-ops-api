@@ -9,6 +9,8 @@ from wtforms import StringField
 from wtforms.validators import DataRequired, Length, URL
 from .schema import ListField
 from internal.exception import ValidateErrorException
+from marshmallow import Schema, fields, pre_dump
+from internal.model import ApiToolProvider
 
 
 class ValidationOpenAPISchemaReq(FlaskForm):
@@ -50,3 +52,23 @@ class CreateAPIToolsSchemaReq(FlaskForm):
                 raise ValidateErrorException("headers字段必须是一个字典列表")
             if set(header.keys()) != {"key", "value"}:
                 raise ValidateErrorException("headers字段必须只包含key和value字段")
+
+
+class GetAPIToolsProviderSchemaRes(Schema):
+    id = fields.UUID()
+    name = fields.String()
+    icon = fields.String()
+    openapi_schema = fields.String()
+    headers = fields.List(fields.Dict(), default=[])
+    created_at = fields.Integer()
+
+    @pre_dump
+    def process_data(self, data: ApiToolProvider, **kwargs):
+        return {
+            "id": data.id,
+            "name": data.name,
+            "icon": data.icon,
+            "openapi_schema": data.openapi_schema,
+            "headers": data.headers,
+            "created_at": int(data.created_at.timestamp()),
+        }
