@@ -6,7 +6,9 @@
 
 from flask_wtf import FlaskForm
 from wtforms import StringField
-from wtforms.validators import DataRequired, Length, URL
+from wtforms.validators import DataRequired, Length, URL, Optional
+
+from pkg.pagination import PaginationReq
 from .schema import ListField
 from internal.exception import ValidateErrorException
 from marshmallow import Schema, fields, pre_dump
@@ -99,4 +101,39 @@ class GetAPIToolSchemaRes(Schema):
                 "description": provider.description,
                 "headers": provider.headers,
             },
+        }
+
+
+class GetToolsPaginationSchemaReq(PaginationReq):
+    search_word = StringField("search_word", default="", validators=[Optional()])
+
+
+class GetToolsPaginationItemSchemaRes(Schema):
+    id = fields.UUID()
+    name = fields.String()
+    icon = fields.String()
+    tools = fields.List(fields.Dict(), default=[])
+    description = fields.String()
+    headers = fields.List(fields.Dict(), default=[])
+
+    @pre_dump
+    def process_data(self, data, **kwargs):
+        return {
+            "id": data.id,
+            "name": data.name,
+            "icon": data.icon,
+            "tools": [
+                {
+                    "id": tool.id,
+                    "name": tool.name,
+                    "description": tool.description,
+                    "inputs": [
+                        {k: v for k, v in parameter.items() if k != "in"}
+                        for parameter in tool.parameters
+                    ],
+                }
+                for tool in data.tools
+            ],
+            "description": data.description,
+            "headers": data.headers,
         }

@@ -12,9 +12,13 @@ from internal.schema import (
     CreateAPIToolsSchemaReq,
     GetAPIToolsProviderSchemaRes,
     GetAPIToolSchemaRes,
+    GetToolsPaginationSchemaReq,
+    GetToolsPaginationItemSchemaRes,
 )
 from internal.service import ApiToolService
 from pkg.response import validate_error_json, success_message, success_json
+from flask import request
+from pkg.pagination import PageModel
 
 
 @inject
@@ -51,3 +55,14 @@ class ApiToolHandler:
     def delete_api_tool_provider(self, provider_id: UUID):
         self.api_tool_service.delete_api_tool_provider(provider_id)
         return success_message("删除api tool provider成功")
+
+    def get_api_tools_pagination(self):
+        req = GetToolsPaginationSchemaReq(request.args)
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        schema = GetToolsPaginationItemSchemaRes(many=True)
+
+        list, paginator = self.api_tool_service.get_api_tools_pagination(req)
+        dump_list = schema.dump(list)
+        return success_json(PageModel(dump_list, paginator))

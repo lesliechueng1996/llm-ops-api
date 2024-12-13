@@ -9,9 +9,11 @@ from injector import inject
 from dataclasses import dataclass
 from internal.exception import ValidateErrorException, NotFoundException
 from internal.core.tools.api_tools.entities import OpenAPISchema
-from internal.schema import CreateAPIToolsSchemaReq
+from internal.schema import CreateAPIToolsSchemaReq, GetToolsPaginationSchemaReq
 from pkg.sqlalchemy import SQLAlchemy
 from internal.model import ApiToolProvider, ApiTool
+from pkg.pagination import Paginator
+from sqlalchemy import desc
 
 
 @inject
@@ -122,3 +124,20 @@ class ApiToolService:
                 provider_id=provider_id, account_id=account_id
             ).delete()
         return
+
+    def get_api_tools_pagination(self, req: GetToolsPaginationSchemaReq):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        filters = [ApiToolProvider.account_id == account_id]
+        if req.search_word.data:
+            filters.append(ApiToolProvider.name.ilike(f"%{req.search_word.data}%"))
+
+        query = (
+            self.db.session.query(ApiToolProvider)
+            .filter(*filters)
+            .order_by(desc("created_at"))
+        )
+        paginator = Paginator(self.db, req)
+        providers = paginator.paginate(query)
+
+        return providers, paginator
