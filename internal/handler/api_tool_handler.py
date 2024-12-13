@@ -11,6 +11,7 @@ from internal.schema import (
     ValidationOpenAPISchemaReq,
     CreateAPIToolsSchemaReq,
     GetAPIToolsProviderSchemaRes,
+    GetAPIToolSchemaRes,
 )
 from internal.service import ApiToolService
 from pkg.response import validate_error_json, success_message, success_json
@@ -41,3 +42,8 @@ class ApiToolHandler:
         provider = self.api_tool_service.get_api_tools_provider(provider_id)
         res_schema = GetAPIToolsProviderSchemaRes()
         return success_json(res_schema.dump(provider))
+
+    def get_api_tool(self, provider_id: UUID, tool_name: str):
+        api_tool = self.api_tool_service.get_api_tool(provider_id, tool_name)
+        res_schema = GetAPIToolSchemaRes()
+        return success_json(res_schema.dump(api_tool))

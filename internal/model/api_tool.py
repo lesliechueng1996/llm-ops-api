@@ -88,3 +88,7 @@ class ApiTool(db.Model):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP(0)"),
     )
+
+    @property
+    def provider(self) -> ApiToolProvider:
+        return db.session.query(ApiToolProvider).get(self.provider_id)

@@ -92,3 +92,21 @@ class ApiToolService:
             raise NotFoundException("工具提供商不存在")
 
         return provider
+
+    def get_api_tool(self, provider_id: str, tool_name: str) -> ApiTool:
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        tool = (
+            self.db.session.query(ApiTool)
+            .filter_by(
+                provider_id=provider_id,
+                account_id=account_id,
+                name=tool_name,
+            )
+            .one_or_none()
+        )
+
+        if not tool:
+            raise NotFoundException("工具不存在")
+
+        return tool

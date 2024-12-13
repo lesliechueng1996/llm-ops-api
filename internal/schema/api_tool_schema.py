@@ -10,7 +10,7 @@ from wtforms.validators import DataRequired, Length, URL
 from .schema import ListField
 from internal.exception import ValidateErrorException
 from marshmallow import Schema, fields, pre_dump
-from internal.model import ApiToolProvider
+from internal.model import ApiToolProvider, ApiTool
 
 
 class ValidationOpenAPISchemaReq(FlaskForm):
@@ -71,4 +71,32 @@ class GetAPIToolsProviderSchemaRes(Schema):
             "openapi_schema": data.openapi_schema,
             "headers": data.headers,
             "created_at": int(data.created_at.timestamp()),
+        }
+
+
+class GetAPIToolSchemaRes(Schema):
+    id = fields.UUID()
+    name = fields.String()
+    description = fields.String()
+    inputs = fields.List(fields.Dict(), default=[])
+    provider = fields.Dict()
+
+    @pre_dump
+    def process_data(self, data: ApiTool, **kwargs):
+        provider = data.provider
+        return {
+            "id": data.id,
+            "name": data.name,
+            "description": data.description,
+            "inputs": [
+                {key: value for key, value in parameter.items() if key != "in"}
+                for parameter in data.parameters
+            ],
+            "provider": {
+                "id": provider.id,
+                "name": provider.name,
+                "icon": provider.icon,
+                "description": provider.description,
+                "headers": provider.headers,
+            },
         }
