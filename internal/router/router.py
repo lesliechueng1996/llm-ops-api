@@ -84,4 +84,9 @@ class Router:
             "/api-tools",
             view_func=self.api_tool_handler.get_api_tools_pagination,
         )
+        bp.add_url_rule(
+            "/api-tools/<uuid:provider_id>",
+            methods=["PUT"],
+            view_func=self.api_tool_handler.update_api_tools_provider,
+        )
         app.register_blueprint(bp)

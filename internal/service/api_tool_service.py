@@ -9,7 +9,11 @@ from injector import inject
 from dataclasses import dataclass
 from internal.exception import ValidateErrorException, NotFoundException
 from internal.core.tools.api_tools.entities import OpenAPISchema
-from internal.schema import CreateAPIToolsSchemaReq, GetToolsPaginationSchemaReq
+from internal.schema import (
+    CreateAPIToolsSchemaReq,
+    GetToolsPaginationSchemaReq,
+    UpdateAPIToolsSchemaReq,
+)
 from pkg.sqlalchemy import SQLAlchemy
 from internal.model import ApiToolProvider, ApiTool
 from pkg.pagination import Paginator
@@ -141,3 +145,49 @@ class ApiToolService:
         providers = paginator.paginate(query)
 
         return providers, paginator
+
+    def update_api_tools_provider(self, req: UpdateAPIToolsSchemaReq, provider_id: str):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        openapi_schema = self.validate_openapi_schema(req.openapi_schema.data)
+        provider = self.get_api_tools_provider(provider_id)
+
+        same_name_providers = (
+            self.db.session.query(ApiToolProvider)
+            .filter(
+                ApiToolProvider.account_id == account_id,
+                ApiToolProvider.name == req.name.data,
+                ApiToolProvider.id != provider_id,
+            )
+            .all()
+        )
+        if same_name_providers:
+            raise ValidateErrorException("工具提供商名称已经存在")
+
+        with self.db.auto_commit():
+            provider.name = req.name.data
+            provider.icon = req.icon.data
+            provider.headers = req.headers.data
+            provider.openapi_schema = json.dumps(
+                openapi_schema.model_dump(), ensure_ascii=False
+            )
+
+            self.db.session.query(ApiTool).filter_by(
+                provider_id=provider_id, account_id=account_id
+            ).delete()
+
+            tools = []
+            for path, path_item in openapi_schema.paths.items():
+                for method, method_item in path_item.items():
+                    tools.append(
+                        ApiTool(
+                            account_id=account_id,
+                            provider_id=provider.id,
+                            name=method_item.get("operationId"),
+                            description=method_item.get("description"),
+                            url=f"{openapi_schema.server}{path}",
+                            method=method,
+                            parameters=method_item.get("parameters"),
+                        )
+                    )
+            self.db.session.add_all(tools)

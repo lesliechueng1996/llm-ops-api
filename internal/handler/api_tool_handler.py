@@ -14,6 +14,7 @@ from internal.schema import (
     GetAPIToolSchemaRes,
     GetToolsPaginationSchemaReq,
     GetToolsPaginationItemSchemaRes,
+    UpdateAPIToolsSchemaReq,
 )
 from internal.service import ApiToolService
 from pkg.response import validate_error_json, success_message, success_json
@@ -66,3 +67,10 @@ class ApiToolHandler:
         list, paginator = self.api_tool_service.get_api_tools_pagination(req)
         dump_list = schema.dump(list)
         return success_json(PageModel(dump_list, paginator))
+
+    def update_api_tools_provider(self, provider_id: UUID):
+        req = UpdateAPIToolsSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        self.api_tool_service.update_api_tools_provider(req, provider_id)
+        return success_message("更新自定义API插件成功")

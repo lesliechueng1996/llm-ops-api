@@ -12,6 +12,7 @@ from .api_tool_schema import (
     GetAPIToolSchemaRes,
     GetToolsPaginationSchemaReq,
     GetToolsPaginationItemSchemaRes,
+    UpdateAPIToolsSchemaReq,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "GetAPIToolSchemaRes",
     "GetToolsPaginationSchemaReq",
     "GetToolsPaginationItemSchemaRes",
+    "UpdateAPIToolsSchemaReq",
 ]
