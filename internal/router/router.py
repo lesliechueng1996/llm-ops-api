@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from flask import Flask, Blueprint
 from injector import inject
 
-from internal.handler import AppHandler, BuiltinToolHandler
+from internal.handler import AppHandler, BuiltinToolHandler, ApiToolHandler
 
 
 @inject
@@ -18,6 +18,7 @@ class Router:
 
     app_handler: AppHandler
     builtin_tool_handler: BuiltinToolHandler
+    api_tool_handler: ApiToolHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -53,6 +54,13 @@ class Router:
         bp.add_url_rule(
             "/builtin-tools/<string:provider_name>/icon",
             view_func=self.builtin_tool_handler.get_provider_icon,
+        )
+
+        # api tools
+        bp.add_url_rule(
+            "/api-tools/validate-openapi-schema",
+            methods=["POST"],
+            view_func=self.api_tool_handler.validate_openapi_schema,
         )
 
         app.register_blueprint(bp)

@@ -7,7 +7,7 @@
 from typing import Any
 from flask import request
 import os
-from internal.schema.app_schema import CompletionReq
+from internal.schema import CompletionReq
 from internal.service import AppService, VectorStoreService
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
