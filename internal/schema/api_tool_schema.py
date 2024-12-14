@@ -115,6 +115,7 @@ class GetToolsPaginationItemSchemaRes(Schema):
     tools = fields.List(fields.Dict(), default=[])
     description = fields.String()
     headers = fields.List(fields.Dict(), default=[])
+    created_at = fields.Integer()
 
     @pre_dump
     def process_data(self, data, **kwargs):
@@ -136,6 +137,7 @@ class GetToolsPaginationItemSchemaRes(Schema):
             ],
             "description": data.description,
             "headers": data.headers,
+            "created_at": int(data.created_at.timestamp()),
         }
 
 
