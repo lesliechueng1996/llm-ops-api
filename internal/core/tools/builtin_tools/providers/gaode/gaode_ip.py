@@ -18,7 +18,6 @@ class GaodeIPArgsSchema(BaseModel):
     ip: str = Field(description="需要查询所在地的IP地址，例如：114.247.50.2")
 
 
-@add_attribute("args_schema", GaodeIPArgsSchema)
 class GaodeIPTool(BaseTool):
     name: str = "gaode_ip"
     description: str = "当你想查询ip所在地址的问题时可以使用的工具"
@@ -51,5 +50,6 @@ class GaodeIPTool(BaseTool):
             return f"获取{ip}所在地失败"
 
 
+@add_attribute("args_schema", GaodeIPArgsSchema)
 def gaode_ip(**kwargs) -> BaseTool:
     return GaodeIPTool()

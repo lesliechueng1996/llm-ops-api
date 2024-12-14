@@ -43,7 +43,6 @@ class BuiltinProviderManager(BaseModel):
 
         # 读取 ./provoder.yaml 文件
         current_dir = path.dirname(path.abspath(__file__))
-        print("current_dir: ", current_dir)
         providers_file_path = path.join(current_dir, "providers.yaml")
         with open(providers_file_path, encoding="utf-8") as f:
             providers_file_data = yaml.safe_load(f)
