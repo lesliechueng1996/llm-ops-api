@@ -39,6 +39,13 @@ class CreateAPIToolsSchemaReq(FlaskForm):
             URL(message="工具提供商图标必须是一个URL"),
         ],
     )
+    description = StringField(
+        "description",
+        validators=[
+            DataRequired(message="工具提供商描述不能为空"),
+            Length(min=1, max=100, message="工具提供商描述长度在1-100"),
+        ],
+    )
     openapi_schema = StringField(
         "openapi_schema",
         validators=[
@@ -60,6 +67,7 @@ class GetAPIToolsProviderSchemaRes(Schema):
     id = fields.UUID()
     name = fields.String()
     icon = fields.String()
+    description = fields.String()
     openapi_schema = fields.String()
     headers = fields.List(fields.Dict(), default=[])
     created_at = fields.Integer()
@@ -71,6 +79,7 @@ class GetAPIToolsProviderSchemaRes(Schema):
             "name": data.name,
             "icon": data.icon,
             "openapi_schema": data.openapi_schema,
+            "description": data.description,
             "headers": data.headers,
             "created_at": int(data.created_at.timestamp()),
         }
@@ -160,6 +169,14 @@ class UpdateAPIToolsSchemaReq(FlaskForm):
         "openapi_schema",
         validators=[
             DataRequired(message="openapi_schema字段不能为空"),
+        ],
+    )
+
+    description = StringField(
+        "description",
+        validators=[
+            DataRequired(message="工具提供商描述不能为空"),
+            Length(min=1, max=100, message="工具提供商描述长度在1-100"),
         ],
     )
     headers = ListField("headers", default=[])

@@ -59,6 +59,7 @@ class ApiToolService:
                 account_id=account_id,
                 name=data.name.data,
                 icon=data.icon.data,
+                description=data.description.data,
                 openapi_schema=json.dumps(
                     openapi_schema.model_dump(), ensure_ascii=False
                 ),
@@ -173,6 +174,7 @@ class ApiToolService:
             provider.openapi_schema = json.dumps(
                 openapi_schema.model_dump(), ensure_ascii=False
             )
+            provider.description = req.description.data
 
             self.db.session.query(ApiTool).filter_by(
                 provider_id=provider_id, account_id=account_id
