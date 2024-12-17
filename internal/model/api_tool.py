@@ -19,7 +19,7 @@ class ApiToolProvider(db.Model):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_api_tool_provider_id"),
         UniqueConstraint(
-            "account_id", "name", name="qk_api_tool_provider_account_id_name"
+            "account_id", "name", name="uk_api_tool_provider_account_id_name"
         ),
         Index("idx_api_tool_provider_account_id", "account_id"),
     )
