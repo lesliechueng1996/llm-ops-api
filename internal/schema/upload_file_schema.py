@@ -6,7 +6,7 @@
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileSize, FileAllowed, FileRequired
-from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS
+from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
 from marshmallow import Schema, fields, pre_dump
 from internal.model import UploadFile
 
@@ -47,3 +47,17 @@ class UploadFileSchemaRes(Schema):
             "mime_type": data.mime_type,
             "created_at": int(data.created_at.timestamp()),
         }
+
+
+class UploadImageSchemaReq(FlaskForm):
+    file = FileField(
+        "file",
+        validators=[
+            FileRequired(message="图片不能为空"),
+            FileSize(max_size=15 * 1024 * 1024, message="图片大小不能超过15MB"),
+            FileAllowed(
+                ALLOWED_IMAGE_EXTENSIONS,
+                message=f"仅支持上传{'/'.join(ALLOWED_IMAGE_EXTENSIONS)}格式的图片",
+            ),
+        ],
+    )

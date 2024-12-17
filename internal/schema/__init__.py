@@ -14,7 +14,11 @@ from .api_tool_schema import (
     GetToolsPaginationItemSchemaRes,
     UpdateAPIToolsSchemaReq,
 )
-from .upload_file_schema import UploadFileSchemaReq, UploadFileSchemaRes
+from .upload_file_schema import (
+    UploadFileSchemaReq,
+    UploadFileSchemaRes,
+    UploadImageSchemaReq,
+)
 
 __all__ = [
     "CompletionReq",
@@ -27,4 +31,5 @@ __all__ = [
     "UpdateAPIToolsSchemaReq",
     "UploadFileSchemaReq",
     "UploadFileSchemaRes",
+    "UploadImageSchemaReq",
 ]

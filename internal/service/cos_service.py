@@ -58,6 +58,16 @@ class CosService:
         except Exception as _:
             raise FailException("上传文件失败")
 
+    def get_file_url(self, key: str):
+        domain = getenv("TENCENT_COS_DOMAIN")
+        if not domain:
+            schema = getenv("TENCENT_COS_SCHEMA")
+            region = getenv("TENCENT_COS_REGION")
+            bucket = self._get_bucket()
+            domain = f"{schema}://{bucket}.cos.{region}.myqcloud.com"
+
+        return f"{domain}/{key}"
+
     def _get_client(self):
         if self.client:
             return self.client

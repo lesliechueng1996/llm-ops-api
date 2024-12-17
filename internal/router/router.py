@@ -102,4 +102,9 @@ class Router:
             methods=["POST"],
             view_func=self.upload_file_handler.upload_file,
         )
+        bp.add_url_rule(
+            "/upload-files/image",
+            methods=["POST"],
+            view_func=self.upload_file_handler.upload_image,
+        )
         app.register_blueprint(bp)
