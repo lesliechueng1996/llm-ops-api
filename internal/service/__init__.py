@@ -11,6 +11,7 @@ from .api_tool_service import ApiToolService
 from .cos_service import CosService
 from .upload_file_service import UploadFileService
 from .dataset_service import DatasetService
+from .embedding_service import EmbeddingService
 
 __all__ = [
     "AppService",
@@ -20,4 +21,5 @@ __all__ = [
     "CosService",
     "UploadFileService",
     "DatasetService",
+    "EmbeddingService",
 ]

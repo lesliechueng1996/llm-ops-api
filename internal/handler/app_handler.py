@@ -8,7 +8,12 @@ from typing import Any
 from flask import request
 import os
 from internal.schema import CompletionReq
-from internal.service import AppService, VectorStoreService, ApiToolService
+from internal.service import (
+    AppService,
+    VectorStoreService,
+    ApiToolService,
+    EmbeddingService,
+)
 from internal.task.demo_task import demo_task
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
@@ -31,9 +36,10 @@ class AppHandler:
     app_service: AppService
     vector_store_service: VectorStoreService
     api_tool_service: ApiToolService
+    embedding_service: EmbeddingService
 
     def ping(self):
-        demo_task.delay(uuid4())
+        print(self.embedding_service.embeddings.embed_query("hello, world"))
         return success_message("pong")
 
     @classmethod
