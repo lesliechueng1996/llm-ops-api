@@ -19,7 +19,11 @@ from .upload_file_schema import (
     UploadFileSchemaRes,
     UploadImageSchemaReq,
 )
-from .dataset_schema import CreateDatasetSchemaReq, UpdateDatasetSchemaReq
+from .dataset_schema import (
+    CreateDatasetSchemaReq,
+    UpdateDatasetSchemaReq,
+    GetDatasetSchemaRes,
+)
 
 __all__ = [
     "CompletionReq",
@@ -35,4 +39,5 @@ __all__ = [
     "UploadImageSchemaReq",
     "CreateDatasetSchemaReq",
     "UpdateDatasetSchemaReq",
+    "GetDatasetSchemaRes",
 ]

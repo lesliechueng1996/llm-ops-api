@@ -7,9 +7,13 @@
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import CreateDatasetSchemaReq, UpdateDatasetSchemaReq
+from internal.schema import (
+    CreateDatasetSchemaReq,
+    UpdateDatasetSchemaReq,
+    GetDatasetSchemaRes,
+)
 from internal.service import DatasetService
-from pkg.response import validate_error_json, success_message
+from pkg.response import validate_error_json, success_message, success_json
 
 
 @inject
@@ -31,3 +35,9 @@ class DatasetHandler:
             return validate_error_json(req.errors)
         self.dataset_service.update_dataset(dataset_id, req)
         return success_message("更新知识库成功")
+
+    def get_dataset(self, dataset_id: UUID):
+        dataset = self.dataset_service.get_dataset(dataset_id)
+        schema = GetDatasetSchemaRes()
+
+        return success_json(schema.dump(dataset))

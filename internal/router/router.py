@@ -121,4 +121,8 @@ class Router:
             methods=["PUT"],
             view_func=self.dataset_handler.update_dataset,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>",
+            view_func=self.dataset_handler.get_dataset,
+        )
         app.register_blueprint(bp)
