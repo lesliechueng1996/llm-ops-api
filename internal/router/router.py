@@ -8,7 +8,12 @@ from dataclasses import dataclass
 from flask import Flask, Blueprint
 from injector import inject
 
-from internal.handler import AppHandler, BuiltinToolHandler, ApiToolHandler
+from internal.handler import (
+    AppHandler,
+    BuiltinToolHandler,
+    ApiToolHandler,
+    UploadFileHandler,
+)
 
 
 @inject
@@ -19,6 +24,7 @@ class Router:
     app_handler: AppHandler
     builtin_tool_handler: BuiltinToolHandler
     api_tool_handler: ApiToolHandler
+    upload_file_handler: UploadFileHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -88,5 +94,12 @@ class Router:
             "/api-tools/<uuid:provider_id>",
             methods=["PUT"],
             view_func=self.api_tool_handler.update_api_tools_provider,
+        )
+
+        # Upload file
+        bp.add_url_rule(
+            "/upload-files/file",
+            methods=["POST"],
+            view_func=self.upload_file_handler.upload_file,
         )
         app.register_blueprint(bp)
