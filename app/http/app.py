@@ -26,5 +26,7 @@ app = Http(
     migrate=injector.get(Migrate),
 )
 
+celery = app.extensions["celery"]
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8000)

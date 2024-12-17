@@ -9,10 +9,11 @@ from flask import request
 import os
 from internal.schema import CompletionReq
 from internal.service import AppService, VectorStoreService, ApiToolService
+from internal.task.demo_task import demo_task
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_models.moonshot import MoonshotChat
 from langchain_core.output_parsers.string import StrOutputParser
@@ -32,11 +33,7 @@ class AppHandler:
     api_tool_service: ApiToolService
 
     def ping(self):
-        print(
-            self.api_tool_service.invoke_api_tool(
-                "9004b3e6-3352-42a5-afc2-0f31aa64db89", "Lalala"
-            )
-        )
+        demo_task.delay(uuid4())
         return success_message("pong")
 
     @classmethod

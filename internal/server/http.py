@@ -9,6 +9,8 @@ from pkg.sqlalchemy import SQLAlchemy
 import logging
 from internal.exception import CustomException
 from internal.extension import logging_extension
+from internal.extension import redis_extension
+from internal.extension import celery_extension
 from internal.router import Router
 from config import Config
 from pkg.response import json, Response, HttpCode
@@ -30,6 +32,8 @@ class Http(Flask):
         logging_extension.init_app(self)
         router.register_router(self)
         self.config.from_object(config)
+        redis_extension.init_app(self)
+        celery_extension.init_app(self)
         self.register_error_handler(Exception, self._error_handler)
         db.init_app(self)
         CORS(

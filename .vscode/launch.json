@@ -54,6 +54,13 @@
       "request": "launch",
       "program": "${workspaceFolder}/command/db_downgrade.py",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Run celery",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/command/run_celery.py",
+      "console": "integratedTerminal"
     }
   ]
 }
