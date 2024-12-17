@@ -11,9 +11,13 @@ from internal.schema import (
     CreateDatasetSchemaReq,
     UpdateDatasetSchemaReq,
     GetDatasetSchemaRes,
+    GetDatasetsPaginationSchemaReq,
+    GetDatasetsPaginationItemSchemaRes,
 )
 from internal.service import DatasetService
+from pkg.pagination import PageModel
 from pkg.response import validate_error_json, success_message, success_json
+from flask import request
 
 
 @inject
@@ -41,3 +45,13 @@ class DatasetHandler:
         schema = GetDatasetSchemaRes()
 
         return success_json(schema.dump(dataset))
+
+    def get_datasets_pagination(self):
+        req = GetDatasetsPaginationSchemaReq(request.args)
+        if not req.validate():
+            return validate_error_json(req.errors)
+        datasets, paginator = self.dataset_service.get_datasets_pagination(req)
+        schema = GetDatasetsPaginationItemSchemaRes(many=True)
+
+        dump_list = schema.dump(datasets)
+        return success_json(PageModel(dump_list, paginator))

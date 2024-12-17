@@ -6,12 +6,17 @@
 
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import CreateDatasetSchemaReq, UpdateDatasetSchemaReq
+from internal.schema import (
+    CreateDatasetSchemaReq,
+    UpdateDatasetSchemaReq,
+    GetDatasetsPaginationSchemaReq,
+)
 from pkg.sqlalchemy import SQLAlchemy
 from internal.model import Dataset, Document, Segment, AppDatasetJoin
 from internal.entity import DEFAULT_DATASET_DESCRIPTION_FORMATTER
 from internal.exception import ValidateErrorException, NotFoundException
-from sqlalchemy import func
+from sqlalchemy import func, desc
+from pkg.pagination import Paginator
 
 
 @inject
@@ -115,3 +120,54 @@ class DatasetService:
             "updated_at": dataset.updated_at,
             "created_at": dataset.created_at,
         }
+
+    def get_datasets_pagination(self, req: GetDatasetsPaginationSchemaReq) -> list:
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        filters = [Dataset.account_id == account_id]
+        if req.search_word.data:
+            filters.append(Dataset.name.ilike(f"%{req.search_word.data}%"))
+
+        paginator = Paginator(self.db, req)
+
+        datasets = paginator.paginate(
+            self.db.session.query(Dataset).filter(*filters).order_by(desc("created_at"))
+        )
+
+        dataset_ids = [dataset.id for dataset in datasets]
+        document_result = (
+            self.db.session.query(
+                Document.dataset_id,
+                func.count(Document.id),
+                func.coalesce(func.sum(Document.character_count), 0),
+            )
+            .filter(Document.dataset_id.in_(dataset_ids))
+            .group_by(Document.dataset_id)
+            .all()
+        )
+        document_map = {item[0]: item for item in document_result}
+
+        app_result = (
+            self.db.session.query(
+                AppDatasetJoin.dataset_id, func.count(AppDatasetJoin.id)
+            )
+            .filter(AppDatasetJoin.dataset_id.in_(dataset_ids))
+            .group_by(AppDatasetJoin.dataset_id)
+            .all()
+        )
+        app_map = {item[0]: item for item in app_result}
+
+        return [
+            {
+                "id": dataset.id,
+                "name": dataset.name,
+                "icon": dataset.icon,
+                "description": dataset.description,
+                "document_count": document_map.get(dataset.id, (0, 0))[0],
+                "character_count": document_map.get(dataset.id, (0, 0))[1],
+                "related_app_count": app_map.get(dataset.id, 0),
+                "updated_at": dataset.updated_at,
+                "created_at": dataset.created_at,
+            }
+            for dataset in datasets
+        ], paginator

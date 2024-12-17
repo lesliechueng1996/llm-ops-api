@@ -23,6 +23,8 @@ from .dataset_schema import (
     CreateDatasetSchemaReq,
     UpdateDatasetSchemaReq,
     GetDatasetSchemaRes,
+    GetDatasetsPaginationSchemaReq,
+    GetDatasetsPaginationItemSchemaRes,
 )
 
 __all__ = [
@@ -40,4 +42,6 @@ __all__ = [
     "CreateDatasetSchemaReq",
     "UpdateDatasetSchemaReq",
     "GetDatasetSchemaRes",
+    "GetDatasetsPaginationSchemaReq",
+    "GetDatasetsPaginationItemSchemaRes",
 ]

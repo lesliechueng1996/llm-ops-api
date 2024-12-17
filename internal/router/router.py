@@ -125,4 +125,8 @@ class Router:
             "/datasets/<uuid:dataset_id>",
             view_func=self.dataset_handler.get_dataset,
         )
+        bp.add_url_rule(
+            "/datasets",
+            view_func=self.dataset_handler.get_datasets_pagination,
+        )
         app.register_blueprint(bp)
