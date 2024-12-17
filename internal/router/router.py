@@ -13,6 +13,7 @@ from internal.handler import (
     BuiltinToolHandler,
     ApiToolHandler,
     UploadFileHandler,
+    DatasetHandler,
 )
 
 
@@ -25,6 +26,7 @@ class Router:
     builtin_tool_handler: BuiltinToolHandler
     api_tool_handler: ApiToolHandler
     upload_file_handler: UploadFileHandler
+    dataset_handler: DatasetHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -106,5 +108,17 @@ class Router:
             "/upload-files/image",
             methods=["POST"],
             view_func=self.upload_file_handler.upload_image,
+        )
+
+        # Dataset
+        bp.add_url_rule(
+            "/datasets",
+            methods=["POST"],
+            view_func=self.dataset_handler.create_dataset,
+        )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>",
+            methods=["PUT"],
+            view_func=self.dataset_handler.update_dataset,
         )
         app.register_blueprint(bp)

@@ -10,6 +10,7 @@ from .builtin_tool_service import BuiltinToolService
 from .api_tool_service import ApiToolService
 from .cos_service import CosService
 from .upload_file_service import UploadFileService
+from .dataset_service import DatasetService
 
 __all__ = [
     "AppService",
@@ -18,4 +19,5 @@ __all__ = [
     "ApiToolService",
     "CosService",
     "UploadFileService",
+    "DatasetService",
 ]
