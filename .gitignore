@@ -8,3 +8,4 @@ __pycache__
 embeddings
 .cache
 vector-store
+storage/log

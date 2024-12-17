@@ -6,8 +6,9 @@
 
 from flask import Flask
 from pkg.sqlalchemy import SQLAlchemy
-import traceback
+import logging
 from internal.exception import CustomException
+from internal.extension import logging_extension
 from internal.router import Router
 from config import Config
 from pkg.response import json, Response, HttpCode
@@ -26,6 +27,7 @@ class Http(Flask):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
+        logging_extension.init_app(self)
         router.register_router(self)
         self.config.from_object(config)
         self.register_error_handler(Exception, self._error_handler)
@@ -51,7 +53,7 @@ class Http(Flask):
         #     db.create_all()
 
     def _error_handler(self, error: Exception):
-        traceback.print_exception(error)
+        logging.error("An error occurred: %s", error, exc_info=True)
         if isinstance(error, CustomException):
             return json(
                 Response(
