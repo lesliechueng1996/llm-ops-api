@@ -26,6 +26,8 @@ from .dataset_schema import (
     GetDatasetsPaginationSchemaReq,
     GetDatasetsPaginationItemSchemaRes,
 )
+from .schema import DictField, ListField
+from .document_schema import CreateDocumentsSchemaReq, CreateDocumentsSchemaRes
 
 __all__ = [
     "CompletionReq",
@@ -44,4 +46,8 @@ __all__ = [
     "GetDatasetSchemaRes",
     "GetDatasetsPaginationSchemaReq",
     "GetDatasetsPaginationItemSchemaRes",
+    "DictField",
+    "ListField",
+    "CreateDocumentsSchemaReq",
+    "CreateDocumentsSchemaRes",
 ]

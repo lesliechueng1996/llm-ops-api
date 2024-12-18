@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import tempfile
 from pathlib import Path
 from injector import inject
+import requests
 from internal.model import UploadFile
 from typing import Union
 from langchain_core.documents import Document
@@ -42,6 +43,22 @@ class FileExtractor:
             file_path = path.join(temp_dir, path.basename(upload_file.key))
             self.cos_service.download_file(upload_file.key, file_path)
             return self.load_from_file(file_path, return_text, is_unstructured)
+
+    def load_from_url(
+        self, url: str, return_text: bool = False
+    ) -> Union[list[Document], str]:
+        """从传入的URL中去加载数据，返回LangChain文档列表或者字符串"""
+        # 1.下载远程URL的文件到本地
+        response = requests.get(url)
+
+        # 2.将文件下载到本地的临时文件夹
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # 3.获取文件的扩展名，并构建临时存储路径，将远程文件存储到本地
+            file_path = path.join(temp_dir, path.basename(url))
+            with open(file_path, "wb") as file:
+                file.write(response.content)
+
+            return self.load_from_file(file_path, return_text)
 
     def load_from_file(
         self, file_path: str, return_text: bool = False, is_unstructured: bool = True

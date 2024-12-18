@@ -6,17 +6,14 @@
 
 from flask_migrate import Migrate
 from pkg.sqlalchemy import SQLAlchemy
-from injector import Injector
 from dotenv import load_dotenv
-
-from .module import ExtensionModule
 from config import Config
 from internal.router import Router
 from internal.server import Http
+from .module import injector
 
 load_dotenv()
 
-injector = Injector([ExtensionModule])
 
 app = Http(
     __name__,
