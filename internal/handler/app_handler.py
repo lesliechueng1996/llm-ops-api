@@ -8,17 +8,11 @@ from typing import Any
 from flask import request
 import os
 from internal.schema import CompletionReq
-from internal.service import (
-    AppService,
-    VectorStoreService,
-    ApiToolService,
-    EmbeddingService,
-)
-from internal.task.demo_task import demo_task
+from internal.service import AppService, VectorStoreService, JiebaService
 from pkg.response import validate_error_json, success_json, success_message
 from injector import inject
 from dataclasses import dataclass
-from uuid import UUID, uuid4
+from uuid import UUID
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_models.moonshot import MoonshotChat
 from langchain_core.output_parsers.string import StrOutputParser
@@ -28,6 +22,9 @@ from langchain_core.memory import BaseMemory
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableConfig
 from operator import itemgetter
 from langchain_core.tracers.schemas import Run
+from internal.core.file_extractor import FileExtractor
+from pkg.sqlalchemy import SQLAlchemy
+from internal.model import UploadFile
 
 
 @inject
@@ -35,11 +32,25 @@ from langchain_core.tracers.schemas import Run
 class AppHandler:
     app_service: AppService
     vector_store_service: VectorStoreService
-    api_tool_service: ApiToolService
-    embedding_service: EmbeddingService
+    # api_tool_service: ApiToolService
+    # embedding_service: EmbeddingService
+    file_extractor: FileExtractor
+    db: SQLAlchemy
+    jieba_service: JiebaService
 
     def ping(self):
-        print(self.embedding_service.embeddings.embed_query("hello, world"))
+        print(
+            self.jieba_service.extract_keywords(
+                "我是一个强大的聊天机器人，能根据对应的上下文和历史对话信息回复用户问题。"
+            )
+        )
+
+        upload_file = (
+            self.db.session.query(UploadFile)
+            .filter_by(id="8d9193d1-44f1-4df7-b8a9-ba819f9b7c03")
+            .first()
+        )
+        print(self.file_extractor.load(upload_file))
         return success_message("pong")
 
     @classmethod

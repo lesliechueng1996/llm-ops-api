@@ -68,6 +68,11 @@ class CosService:
 
         return f"{domain}/{key}"
 
+    def download_file(self, key: str, file_pth: str):
+        client = self._get_client()
+        bucket = self._get_bucket()
+        client.download_file(Bucket=bucket, Key=key, DestFilePath=file_pth)
+
     def _get_client(self):
         if self.client:
             return self.client
