@@ -151,4 +151,8 @@ class Router:
             methods=["PATCH"],
             view_func=self.document_handler.update_document_name,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents",
+            view_func=self.document_handler.get_documents_pagination,
+        )
         app.register_blueprint(bp)

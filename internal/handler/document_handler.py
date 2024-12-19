@@ -12,8 +12,11 @@ from internal.schema import (
     CreateDocumentsSchemaRes,
     GetDocumentSchemaRes,
     UpdateDocumentNameSchemaReq,
+    GetDocumentsPaginationSchemaReq,
+    GetDocumentsPaginationItemSchemaRes,
 )
 from pkg.response import validate_error_json, success_json, success_message
+from pkg.pagination import PageModel
 from internal.service import DocumentService
 
 
@@ -58,3 +61,16 @@ class DocumentHandler:
         )
 
         return success_message("更新成功")
+
+    def get_documents_pagination(self, dataset_id: UUID):
+        req = GetDocumentsPaginationSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        documents, paginator = self.document_service.get_documents_pagination(
+            dataset_id, req
+        )
+
+        schema = GetDocumentsPaginationItemSchemaRes(many=True)
+        dump_list = schema.dump(documents)
+        return success_json(PageModel(dump_list, paginator))

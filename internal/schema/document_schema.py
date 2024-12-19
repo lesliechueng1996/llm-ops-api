@@ -10,10 +10,11 @@ from wtforms import StringField
 from internal.entity import ProcessType, DEFAULT_PROCESS_RULE
 from internal.schema import ListField, DictField
 from internal.exception import ValidateErrorException
-from wtforms.validators import DataRequired, AnyOf, Length
+from wtforms.validators import DataRequired, AnyOf, Length, Optional
 from internal.schema.schema import DictField
 from marshmallow import Schema, fields, pre_dump
 from internal.model import Document
+from pkg.pagination import PaginationReq
 
 
 class CreateDocumentsSchemaReq(FlaskForm):
@@ -174,3 +175,26 @@ class UpdateDocumentNameSchemaReq(FlaskForm):
             Length(min=1, max=100, message="name长度必须在1-100之间"),
         ],
     )
+
+
+class GetDocumentsPaginationSchemaReq(PaginationReq):
+    search_word = StringField(
+        "search_word",
+        validators=[
+            Optional(),
+        ],
+    )
+
+
+class GetDocumentsPaginationItemSchemaRes(Schema):
+    id = fields.UUID()
+    name = fields.String()
+    character_count = fields.Integer()
+    hit_count = fields.Integer()
+    position = fields.Integer()
+    enabled = fields.Boolean()
+    disabled_at = fields.Integer()
+    status = fields.String()
+    error = fields.String()
+    updated_at = fields.Integer()
+    created_at = fields.Integer()

@@ -32,6 +32,8 @@ from .document_schema import (
     CreateDocumentsSchemaRes,
     GetDocumentSchemaRes,
     UpdateDocumentNameSchemaReq,
+    GetDocumentsPaginationSchemaReq,
+    GetDocumentsPaginationItemSchemaRes,
 )
 
 __all__ = [
@@ -57,4 +59,6 @@ __all__ = [
     "CreateDocumentsSchemaRes",
     "GetDocumentSchemaRes",
     "UpdateDocumentNameSchemaReq",
+    "GetDocumentsPaginationSchemaReq",
+    "GetDocumentsPaginationItemSchemaRes",
 ]

@@ -17,6 +17,9 @@ from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ProcessType, SegmentSta
 import time
 import random
 from internal.lib.helper import datetime_to_timestamp
+from internal.schema import GetDocumentsPaginationSchemaReq
+from pkg.pagination import Paginator
+from sqlalchemy import desc
 
 
 @inject
@@ -239,3 +242,46 @@ class DocumentService:
         with self.db.auto_commit():
             doc.name = name
         return
+
+    def get_documents_pagination(
+        self, dataset_id: UUID, req: GetDocumentsPaginationSchemaReq
+    ):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        filters = [Document.account_id == account_id, Document.dataset_id == dataset_id]
+        if req.search_word.data:
+            filters.append(Document.name.ilike(f"%{req.search_word.data}%"))
+
+        paginator = Paginator(self.db, req)
+        docs = paginator.paginate(
+            self.db.session.query(Document)
+            .filter(*filters)
+            .order_by(desc("created_at"))
+        )
+
+        hit_count_by_doc_id = dict(
+            (
+                self.db.session.query(
+                    Segment.document_id, func.coalesce(func.sum(Segment.hit_count), 0)
+                )
+                .group_by(Segment.document_id)
+                .all()
+            )
+        )
+
+        return [
+            {
+                "id": doc.id,
+                "name": doc.name,
+                "character_count": doc.character_count,
+                "hit_count": hit_count_by_doc_id.get(doc.id, 0),
+                "position": doc.position,
+                "enabled": doc.enabled,
+                "disabled_at": datetime_to_timestamp(doc.disabled_at),
+                "status": doc.status,
+                "error": doc.error,
+                "updated_at": datetime_to_timestamp(doc.updated_at),
+                "created_at": datetime_to_timestamp(doc.created_at),
+            }
+            for doc in docs
+        ], paginator
