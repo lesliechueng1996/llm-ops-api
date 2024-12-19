@@ -4,9 +4,11 @@
 @File   : indexing_service.py
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import re
 from uuid import UUID, uuid4
+from flask import Flask, current_app
 from injector import inject
 from dataclasses import dataclass
 from sqlalchemy import func
@@ -236,22 +238,41 @@ class IndexingService:
             langchain_segment.metadata["document_enabled"] = True
             langchain_segment.metadata["segment_enabled"] = True
 
-        for i in range(0, len(langchain_segments), 10):
-            chunks = langchain_segments[i : i + 10]
-            ids = [str(chunk.metadata["node_id"]) for chunk in chunks]
-            self.vector_store_service.vector_store.add_documents(
-                documents=chunks,
-                ids=ids,
-            )
+        def thread_func(
+            flask_app: Flask, chunks: list[LangchainDocument], ids: list[UUID]
+        ) -> None:
+            with flask_app.app_context():
+                self.vector_store_service.vector_store.add_documents(
+                    documents=chunks,
+                    ids=ids,
+                )
 
-            self.db.session.query(Segment).filter(Segment.node_id.in_(ids)).update(
-                {
-                    "status": SegmentStatus.COMPLETED,
-                    "completed_at": datetime.now(),
-                    "enabled": True,
-                }
-            )
-            self.db.session.commit()
+                with self.db.auto_commit():
+                    self.db.session.query(Segment).filter(
+                        Segment.node_id.in_(ids)
+                    ).update(
+                        {
+                            "status": SegmentStatus.COMPLETED,
+                            "completed_at": datetime.now(),
+                            "enabled": True,
+                        }
+                    )
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = []
+            for i in range(0, len(langchain_segments), 10):
+                chunks = langchain_segments[i : i + 10]
+                ids = [str(chunk.metadata["node_id"]) for chunk in chunks]
+
+                futures.append(
+                    executor.submit(
+                        thread_func, current_app._get_current_object(), chunks, ids
+                    )
+                )
+
+        # 等待所有线程完成
+        for future in futures:
+            future.result()
 
         logging.info(f"Document {document.id} all segments completed")
 
