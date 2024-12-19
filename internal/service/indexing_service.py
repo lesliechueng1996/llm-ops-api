@@ -17,12 +17,12 @@ from internal.entity import DocumentStatus, SegmentStatus
 from datetime import datetime
 from internal.core.file_extractor import FileExtractor
 from internal.service import (
-    ProcessRuleService,
     EmbeddingService,
     JiebaService,
-    KeywordTableService,
     VectorStoreService,
 )
+from internal.service.keyword_table_service import KeywordTableService
+from internal.service.process_rule_service import ProcessRuleService
 from langchain_core.documents import Document as LangchainDocument
 
 
@@ -69,6 +69,9 @@ class IndexingService:
 
                 # 索引文档，更新状态为索引完成
                 self._indexing(document, langchain_segments, keyword_table_record)
+
+                # 完成文档，更新状态为完成
+                self._completed(document, langchain_segments)
 
             except Exception as e:
                 logging.error(f"Build document {document.id} failed, {e}")

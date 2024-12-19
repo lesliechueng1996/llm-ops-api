@@ -86,15 +86,15 @@ class CreateDocumentsSchemaReq(FlaskForm):
             ):
                 raise ValidateErrorException("rule缺少segment的对象字段")
 
-            if "seperators" not in field.data["segment"] or not isinstance(
-                field.data["segment"]["seperators"], list
+            if "separators" not in field.data["segment"] or not isinstance(
+                field.data["segment"]["separators"], list
             ):
-                raise ValidateErrorException("segment缺少seperators的列表字段")
-            for seperator in field.data["segment"]["seperators"]:
+                raise ValidateErrorException("segment缺少separators的列表字段")
+            for seperator in field.data["segment"]["separators"]:
                 if not isinstance(seperator, str):
-                    raise ValidateErrorException("seperators中的每个元素必须是字符串")
-            if len(field.data["segment"]["seperators"]) == 0:
-                raise ValidateErrorException("seperators不能为空")
+                    raise ValidateErrorException("separators中的每个元素必须是字符串")
+            if len(field.data["segment"]["separators"]) == 0:
+                raise ValidateErrorException("separators不能为空")
 
             if "chunk_size" not in field.data["segment"] or not isinstance(
                 field.data["segment"]["chunk_size"], int
@@ -144,7 +144,7 @@ class CreateDocumentsSchemaRes(Schema):
                     "status": doc.status,
                     "created_at": int(doc.created_at.timestamp()),
                 }
-                for doc in data
+                for doc in data[0]
             ],
-            "batch": data["batch"],
+            "batch": data[1],
         }

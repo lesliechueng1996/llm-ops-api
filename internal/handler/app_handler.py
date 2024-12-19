@@ -25,6 +25,7 @@ from langchain_core.tracers.schemas import Run
 from internal.core.file_extractor import FileExtractor
 from pkg.sqlalchemy import SQLAlchemy
 from internal.model import UploadFile
+from internal.task.document_task import build_documents
 
 
 @inject
@@ -39,18 +40,7 @@ class AppHandler:
     jieba_service: JiebaService
 
     def ping(self):
-        print(
-            self.jieba_service.extract_keywords(
-                "我是一个强大的聊天机器人，能根据对应的上下文和历史对话信息回复用户问题。"
-            )
-        )
-
-        upload_file = (
-            self.db.session.query(UploadFile)
-            .filter_by(id="8d9193d1-44f1-4df7-b8a9-ba819f9b7c03")
-            .first()
-        )
-        print(self.file_extractor.load(upload_file))
+        build_documents.delay(["46db30d1-3199-4e79-a0cd-abf12fa6858f"])
         return success_message("pong")
 
     @classmethod

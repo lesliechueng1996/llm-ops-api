@@ -14,6 +14,7 @@ from internal.handler import (
     ApiToolHandler,
     UploadFileHandler,
     DatasetHandler,
+    DocumentHandler,
 )
 
 
@@ -27,6 +28,7 @@ class Router:
     api_tool_handler: ApiToolHandler
     upload_file_handler: UploadFileHandler
     dataset_handler: DatasetHandler
+    document_handler: DocumentHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -129,4 +131,12 @@ class Router:
             "/datasets",
             view_func=self.dataset_handler.get_datasets_pagination,
         )
+
+        # Document
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents",
+            methods=["POST"],
+            view_func=self.document_handler.create_documents,
+        )
+
         app.register_blueprint(bp)

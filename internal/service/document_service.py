@@ -8,7 +8,7 @@ import logging
 from injector import inject
 from dataclasses import dataclass
 from pkg.sqlalchemy import SQLAlchemy
-from internal.schema import CreateDocumentsSchemaReq
+from internal.task.document_task import build_documents
 from internal.model import Document, Dataset, UploadFile, ProcessRule
 from internal.exception import NotFoundException, FailException
 from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ProcessType
@@ -33,7 +33,7 @@ class DocumentService:
         dataset = (
             self.db.session.query(Dataset)
             .filter(Dataset.id == dataset_id, Dataset.account_id == account_id)
-            .get()
+            .one_or_none()
         )
         if not dataset:
             raise NotFoundException("数据集不存在")
@@ -60,7 +60,7 @@ class DocumentService:
             raise FailException("暂未解析到合法文件，请重新上传")
 
         # 创建批次
-        with self.db.auto_commit:
+        with self.db.auto_commit():
             batch = time.strftime("%Y%m%d%H%M%S") + str(random.randint(100000, 999999))
             process_rule = ProcessRule(
                 account_id=account_id,
@@ -68,6 +68,8 @@ class DocumentService:
                 mode=process_type,
                 rule=rule,
             )
+            self.db.session.add(process_rule)
+            self.db.session.flush()
 
             start_position = self.get_latest_document_position(dataset_id=dataset_id)
 
@@ -86,6 +88,9 @@ class DocumentService:
                 documents.append(document)
 
             self.db.session.add_all(documents)
+
+        # 触发构建文档任务
+        build_documents.delay([document.id for document in documents])
 
         return documents, batch
 

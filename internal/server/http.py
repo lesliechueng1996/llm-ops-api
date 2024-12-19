@@ -29,13 +29,17 @@ class Http(Flask):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        logging_extension.init_app(self)
-        router.register_router(self)
+
         self.config.from_object(config)
+
+        self.register_error_handler(Exception, self._error_handler)
+
+        db.init_app(self)
+        migrate.init_app(self, db, directory="internal/migration")
         redis_extension.init_app(self)
         celery_extension.init_app(self)
-        self.register_error_handler(Exception, self._error_handler)
-        db.init_app(self)
+        logging_extension.init_app(self)
+
         CORS(
             self,
             resources={
@@ -51,10 +55,7 @@ class Http(Flask):
                 }
             },
         )
-        migrate.init_app(self, db, directory="internal/migration")
-        # with self.app_context():
-        #     _ = App()
-        #     db.create_all()
+        router.register_router(self)
 
     def _error_handler(self, error: Exception):
         logging.error("An error occurred: %s", error, exc_info=True)
