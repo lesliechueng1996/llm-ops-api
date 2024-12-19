@@ -5,15 +5,18 @@
 """
 
 import logging
+from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
 from pkg.sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from internal.task.document_task import build_documents
-from internal.model import Document, Dataset, UploadFile, ProcessRule
+from internal.model import Document, Dataset, UploadFile, ProcessRule, Segment
 from internal.exception import NotFoundException, FailException
-from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ProcessType
+from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ProcessType, SegmentStatus
 import time
 import random
+from internal.lib.helper import datetime_to_timestamp
 
 
 @inject
@@ -102,3 +105,70 @@ class DocumentService:
             .first()
         )
         return last_document.position if last_document else 0
+
+    def get_documents_batch_status(self, dataset_id: UUID, batch: str) -> list[dict]:
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        docs = (
+            self.db.session.query(Document)
+            .filter(
+                Document.account_id == account_id,
+                Document.dataset_id == dataset_id,
+                Document.batch == batch,
+            )
+            .all()
+        )
+        if docs is None or len(docs) == 0:
+            raise NotFoundException("未发现该批次文档，请稍后再试")
+
+        doc_status_list = []
+        for doc in docs:
+            upload_file = (
+                self.db.session.query(UploadFile)
+                .filter(UploadFile.id == doc.upload_file_id)
+                .one_or_none()
+            )
+            if upload_file is None:
+                continue
+
+            segment_count = (
+                self.db.session.query(func.count(Segment.id))
+                .filter(Segment.document_id == doc.id)
+                .scalar()
+            )
+            completed_segment_count = (
+                self.db.session.query(func.count(Segment.id))
+                .filter(
+                    Segment.document_id == doc.id,
+                    Segment.status == SegmentStatus.COMPLETED,
+                )
+                .scalar()
+            )
+
+            doc_status = {
+                "id": doc.id,
+                "name": doc.name,
+                "size": upload_file.size,
+                "extension": upload_file.extension,
+                "mime_type": upload_file.mime_type,
+                "position": doc.position,
+                "segment_count": segment_count,
+                "completed_segment_count": completed_segment_count,
+                "error": doc.error,
+                "status": doc.status,
+                "processing_started_at": datetime_to_timestamp(
+                    doc.processing_started_at
+                ),
+                "parsing_completed_at": datetime_to_timestamp(doc.parsing_completed_at),
+                "splitting_completed_at": datetime_to_timestamp(
+                    doc.splitting_completed_at
+                ),
+                "indexing_completed_at": datetime_to_timestamp(
+                    doc.indexing_completed_at
+                ),
+                "completed_at": datetime_to_timestamp(doc.completed_at),
+                "stopped_at": datetime_to_timestamp(doc.stopped_at),
+                "created_at": datetime_to_timestamp(doc.created_at),
+            }
+            doc_status_list.append(doc_status)
+        return doc_status_list

@@ -31,3 +31,9 @@ class DocumentHandler:
 
         schema = CreateDocumentsSchemaRes()
         return success_json(schema.dump((documents, batch)))
+
+    def get_documents_batch(self, dataset_id: UUID, batch_id: str):
+        documents_status = self.document_service.get_documents_batch_status(
+            dataset_id, batch_id
+        )
+        return success_json(documents_status)

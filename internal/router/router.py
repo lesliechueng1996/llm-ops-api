@@ -138,5 +138,9 @@ class Router:
             methods=["POST"],
             view_func=self.document_handler.create_documents,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/batch/<string:batch_id>",
+            view_func=self.document_handler.get_documents_batch,
+        )
 
         app.register_blueprint(bp)

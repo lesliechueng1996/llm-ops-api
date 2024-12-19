@@ -1,3 +1,4 @@
+from datetime import datetime
 from hashlib import sha3_256
 from importlib import import_module
 from typing import Any
@@ -23,3 +24,10 @@ def generate_text_hash(text: str) -> str:
 
     # 2.使用sha3_256将数据转换成哈希值后返回
     return sha3_256(text.encode()).hexdigest()
+
+
+def datetime_to_timestamp(dt: datetime) -> int:
+    """将传入的datetime时间转换成时间戳，如果数据不存在则返回0"""
+    if dt is None:
+        return 0
+    return int(dt.timestamp())
