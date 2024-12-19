@@ -142,5 +142,9 @@ class Router:
             "/datasets/<uuid:dataset_id>/documents/batch/<string:batch_id>",
             view_func=self.document_handler.get_documents_batch,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>",
+            view_func=self.document_handler.get_document,
+        )
 
         app.register_blueprint(bp)

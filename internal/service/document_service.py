@@ -172,3 +172,50 @@ class DocumentService:
             }
             doc_status_list.append(doc_status)
         return doc_status_list
+
+    def get_document(self, dataset_id: UUID, document_id: UUID) -> dict:
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        doc = (
+            self.db.session.query(Document)
+            .filter(
+                Document.account_id == account_id,
+                Document.dataset_id == dataset_id,
+                Document.id == document_id,
+            )
+            .one_or_none()
+        )
+
+        if doc is None:
+            raise NotFoundException("文档不存在")
+
+        segment_count = (
+            self.db.session.query(func.count(Segment.id))
+            .filter(Segment.document_id == doc.id)
+            .scalar()
+        )
+        hit_count = (
+            self.db.session.query(
+                func.coalesce(
+                    func.sum(Segment.hit_count),
+                )
+            )
+            .filter(Segment.document_id == doc.id)
+            .scalar()
+        )
+
+        return {
+            "id": doc.id,
+            "dataset_id": doc.dataset_id,
+            "name": doc.name,
+            "segment_count": segment_count,
+            "character_count": doc.character_count,
+            "hit_count": hit_count,
+            "position": doc.position,
+            "enabled": doc.enabled,
+            "disabled_at": datetime_to_timestamp(doc.disabled_at),
+            "status": doc.status,
+            "error": doc.error,
+            "updated_at": datetime_to_timestamp(doc.updated_at),
+            "created_at": datetime_to_timestamp(doc.created_at),
+        }

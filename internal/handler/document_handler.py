@@ -7,7 +7,11 @@
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import CreateDocumentsSchemaReq, CreateDocumentsSchemaRes
+from internal.schema import (
+    CreateDocumentsSchemaReq,
+    CreateDocumentsSchemaRes,
+    GetDocumentSchemaRes,
+)
 from pkg.response import validate_error_json, success_json
 from internal.service import DocumentService
 
@@ -37,3 +41,8 @@ class DocumentHandler:
             dataset_id, batch_id
         )
         return success_json(documents_status)
+
+    def get_document(self, dataset_id: UUID, document_id: UUID):
+        doc_dit = self.document_service.get_document(dataset_id, document_id)
+        schema = GetDocumentSchemaRes()
+        return success_json(schema.dump(doc_dit))

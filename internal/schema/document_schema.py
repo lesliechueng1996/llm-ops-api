@@ -148,3 +148,19 @@ class CreateDocumentsSchemaRes(Schema):
             ],
             "batch": data[1],
         }
+
+
+class GetDocumentSchemaRes(Schema):
+    id = fields.UUID()
+    dataset_id = fields.UUID()
+    name = fields.String()
+    segment_count = fields.Integer()
+    character_count = fields.Integer()
+    hit_count = fields.Integer()
+    position = fields.Integer()
+    enabled = fields.Boolean()
+    disabled_at = fields.Integer()
+    status = fields.String()
+    error = fields.String()
+    updated_at = fields.Integer()
+    created_at = fields.Integer()
