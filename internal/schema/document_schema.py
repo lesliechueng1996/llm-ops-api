@@ -10,7 +10,7 @@ from wtforms import StringField
 from internal.entity import ProcessType, DEFAULT_PROCESS_RULE
 from internal.schema import ListField, DictField
 from internal.exception import ValidateErrorException
-from wtforms.validators import DataRequired, AnyOf
+from wtforms.validators import DataRequired, AnyOf, Length
 from internal.schema.schema import DictField
 from marshmallow import Schema, fields, pre_dump
 from internal.model import Document
@@ -164,3 +164,13 @@ class GetDocumentSchemaRes(Schema):
     error = fields.String()
     updated_at = fields.Integer()
     created_at = fields.Integer()
+
+
+class UpdateDocumentNameSchemaReq(FlaskForm):
+    name = StringField(
+        "name",
+        validators=[
+            DataRequired(message="name不能为空"),
+            Length(min=1, max=100, message="name长度必须在1-100之间"),
+        ],
+    )

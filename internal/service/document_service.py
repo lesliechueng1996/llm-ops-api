@@ -219,3 +219,23 @@ class DocumentService:
             "updated_at": datetime_to_timestamp(doc.updated_at),
             "created_at": datetime_to_timestamp(doc.created_at),
         }
+
+    def update_document_name(self, dataset_id: UUID, document_id: UUID, name: str):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        doc = (
+            self.db.session.query(Document)
+            .filter(
+                Document.account_id == account_id,
+                Document.dataset_id == dataset_id,
+                Document.id == document_id,
+            )
+            .one_or_none()
+        )
+
+        if doc is None:
+            raise NotFoundException("文档不存在")
+
+        with self.db.auto_commit():
+            doc.name = name
+        return

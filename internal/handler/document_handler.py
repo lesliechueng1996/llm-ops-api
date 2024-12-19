@@ -11,8 +11,9 @@ from internal.schema import (
     CreateDocumentsSchemaReq,
     CreateDocumentsSchemaRes,
     GetDocumentSchemaRes,
+    UpdateDocumentNameSchemaReq,
 )
-from pkg.response import validate_error_json, success_json
+from pkg.response import validate_error_json, success_json, success_message
 from internal.service import DocumentService
 
 
@@ -46,3 +47,14 @@ class DocumentHandler:
         doc_dit = self.document_service.get_document(dataset_id, document_id)
         schema = GetDocumentSchemaRes()
         return success_json(schema.dump(doc_dit))
+
+    def update_document_name(self, dataset_id: UUID, document_id: UUID):
+        req = UpdateDocumentNameSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        self.document_service.update_document_name(
+            dataset_id=dataset_id, document_id=document_id, name=req.name.data
+        )
+
+        return success_message("更新成功")
