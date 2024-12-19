@@ -100,7 +100,7 @@ class IndexingService:
         with self.db.auto_commit():
             document.status = DocumentStatus.SPLITTNG
             document.parsing_completed_at = datetime.now()
-            character_count = character_count
+            document.character_count = character_count
 
         logging.info(
             f"Document {document.id} parsing completed, character count: {character_count}"
