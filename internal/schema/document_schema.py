@@ -6,7 +6,7 @@
 
 import uuid
 from flask_wtf import FlaskForm
-from wtforms import StringField
+from wtforms import StringField, BooleanField
 from internal.entity import ProcessType, DEFAULT_PROCESS_RULE
 from internal.schema import ListField, DictField
 from internal.exception import ValidateErrorException
@@ -198,3 +198,11 @@ class GetDocumentsPaginationItemSchemaRes(Schema):
     error = fields.String()
     updated_at = fields.Integer()
     created_at = fields.Integer()
+
+
+class UpdateDocumentEnabledSchemaReq(FlaskForm):
+    enabled = BooleanField("enabled")
+
+    def validate_enabled(self, field: BooleanField):
+        if not isinstance(field.data, bool):
+            raise ValidateErrorException("enabled字段必须是布尔值")

@@ -13,6 +13,7 @@ from .dataset_entity import (
     SegmentStatus,
 )
 from .jieba_entity import STOPWORD_SET
+from .cache_entity import LOCK_DOCUMENT_UPDATE_ENABLED
 
 __all__ = [
     "ALLOWED_IMAGE_EXTENSIONS",
@@ -23,4 +24,5 @@ __all__ = [
     "DEFAULT_PROCESS_RULE",
     "DocumentStatus",
     "SegmentStatus",
+    "LOCK_DOCUMENT_UPDATE_ENABLED",
 ]

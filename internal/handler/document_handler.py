@@ -14,6 +14,7 @@ from internal.schema import (
     UpdateDocumentNameSchemaReq,
     GetDocumentsPaginationSchemaReq,
     GetDocumentsPaginationItemSchemaRes,
+    UpdateDocumentEnabledSchemaReq,
 )
 from pkg.response import validate_error_json, success_json, success_message
 from pkg.pagination import PageModel
@@ -74,3 +75,13 @@ class DocumentHandler:
         schema = GetDocumentsPaginationItemSchemaRes(many=True)
         dump_list = schema.dump(documents)
         return success_json(PageModel(dump_list, paginator))
+
+    def update_document_enabled(self, dataset_id: UUID, document_id: UUID):
+        req = UpdateDocumentEnabledSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        self.document_service.update_document_enabled(
+            dataset_id=dataset_id, document_id=document_id, enabled=req.enabled.data
+        )
+        return success_message("更新成功")

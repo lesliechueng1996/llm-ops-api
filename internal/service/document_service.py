@@ -4,28 +4,38 @@
 @File   : document_service.py
 """
 
+from datetime import datetime
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4
 from injector import inject
 from dataclasses import dataclass
+from redis import Redis
 from pkg.sqlalchemy import SQLAlchemy
 from sqlalchemy import func
-from internal.task.document_task import build_documents
+from internal.task.document_task import build_documents, update_document_enabled
 from internal.model import Document, Dataset, UploadFile, ProcessRule, Segment
-from internal.exception import NotFoundException, FailException
-from internal.entity import ALLOWED_DOCUMENT_EXTENSIONS, ProcessType, SegmentStatus
+from internal.exception import NotFoundException, FailException, ForbiddenException
+from internal.entity import (
+    ALLOWED_DOCUMENT_EXTENSIONS,
+    ProcessType,
+    SegmentStatus,
+    DocumentStatus,
+    LOCK_DOCUMENT_UPDATE_ENABLED,
+)
 import time
 import random
 from internal.lib.helper import datetime_to_timestamp
 from internal.schema import GetDocumentsPaginationSchemaReq
 from pkg.pagination import Paginator
 from sqlalchemy import desc
+from internal.lib.redis_lock import acquire_lock
 
 
 @inject
 @dataclass
 class DocumentService:
     db: SQLAlchemy
+    redis_client: Redis
 
     def create_documents(
         self,
@@ -285,3 +295,47 @@ class DocumentService:
             }
             for doc in docs
         ], paginator
+
+    def update_document_enabled(
+        self, dataset_id: UUID, document_id: UUID, enabled: bool
+    ):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        doc = (
+            self.db.session.query(Document)
+            .filter(
+                Document.account_id == account_id,
+                Document.dataset_id == dataset_id,
+                Document.id == document_id,
+            )
+            .one_or_none()
+        )
+
+        if doc is None:
+            raise NotFoundException("文档不存在")
+
+        if doc.status != DocumentStatus.COMPLETED:
+            raise ForbiddenException("文档未完成解析，无法修改")
+
+        if doc.enabled == enabled:
+            raise FailException(
+                f"文档状态修改错误，当前已是{'启用' if enabled else '禁用'}状态"
+            )
+
+        # 获取分布式锁
+        lock_key = LOCK_DOCUMENT_UPDATE_ENABLED.format(document_id=document_id)
+        lock_value = str(uuid4())
+        if not acquire_lock(self.redis_client, lock_key, lock_value, 600):
+            logging.warning(f"获取锁失败，document_id: {document_id}")
+            raise FailException("当前文档正在修改启用状态，请稍后再次尝试")
+
+        logging.info(
+            f"获取锁成功，document_id: {document_id}, lock_key: {lock_key}, lock_value: {lock_value}"
+        )
+
+        with self.db.auto_commit():
+            doc.enabled = enabled
+            doc.disabled_at = None if enabled else datetime.now()
+
+        update_document_enabled.delay(document_id, lock_key, lock_value, enabled)
+        return

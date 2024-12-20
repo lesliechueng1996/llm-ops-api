@@ -5,6 +5,8 @@ from injector import inject
 from langchain_core.documents import Document
 from internal.service.embedding_service import EmbeddingService
 
+COLLECTION_NAME = "Dataset"
+
 
 @inject
 class VectorStoreService:
@@ -17,7 +19,7 @@ class VectorStoreService:
         )
         self.vector_store = WeaviateVectorStore(
             client=self.client,
-            index_name="Dataset",
+            index_name=COLLECTION_NAME,
             text_key="text",
             embedding=embedding_service.embeddings,
         )
@@ -28,3 +30,7 @@ class VectorStoreService:
     @classmethod
     def combine_documents(cls, documents: list[Document]):
         return "\n\n".join([doc.page_content for doc in documents])
+
+    @property
+    def collection(self):
+        return self.client.collections.get(COLLECTION_NAME)

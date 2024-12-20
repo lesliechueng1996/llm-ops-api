@@ -15,3 +15,14 @@ def build_documents(document_ids: list[UUID]):
 
     indexing_service = injector.get(IndexingService)
     indexing_service.build_documents(document_ids)
+
+
+@shared_task
+def update_document_enabled(
+    document_id: UUID, lock_key: str, lock_value: str, enabled: bool
+):
+    from app.http.module import injector
+    from internal.service import IndexingService
+
+    indexing_service = injector.get(IndexingService)
+    indexing_service.update_document_enabled(document_id, lock_key, lock_value, enabled)

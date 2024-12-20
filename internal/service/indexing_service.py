@@ -11,7 +11,9 @@ from uuid import UUID, uuid4
 from flask import Flask, current_app
 from injector import inject
 from dataclasses import dataclass
+from redis import Redis
 from sqlalchemy import func
+from internal.lib.redis_lock import release_lock
 from pkg.sqlalchemy import SQLAlchemy
 from internal.model import Document, UploadFile, ProcessRule, Segment, KeywordTable
 from internal.lib import generate_text_hash
@@ -38,6 +40,7 @@ class IndexingService:
     jieba_service: JiebaService
     keyword_table_service: KeywordTableService
     vector_store_service: VectorStoreService
+    redis_client: Redis
 
     def build_documents(self, document_ids: list[UUID]):
         if not document_ids or len(document_ids) == 0:
@@ -291,3 +294,71 @@ class IndexingService:
         text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\xEF\xBF\xBE]", "", text)
         text = re.sub("\uFFFE", "", text)  # 删除零宽非标记字符
         return text
+
+    def update_document_enabled(
+        self, document_id: UUID, lock_key: str, lock_value: str, enabled: bool
+    ):
+        try:
+            document = (
+                self.db.session.query(Document)
+                .filter(Document.id == document_id)
+                .one_or_none()
+            )
+            if not document:
+                logging.error(f"Document {document_id} not found")
+                return
+            if document.enabled != enabled:
+                logging.error(
+                    f"Document {document_id} enabled status is not equal to {enabled}"
+                )
+                return
+
+            segments = (
+                self.db.session.query(Segment)
+                .with_entities(Segment.id, Segment.node_id)
+                .filter(
+                    Segment.document_id == document_id,
+                    Segment.status == SegmentStatus.COMPLETED,
+                )
+                .all()
+            )
+
+            node_ids = [node_id for _, node_id in segments]
+
+            collection = self.vector_store_service.collection
+            for node_id in node_ids:
+                try:
+                    collection.data.update(
+                        uuid=node_id,
+                        properties={"document_enabled": enabled},
+                    )
+                except Exception as e:
+                    with self.db.auto_commit():
+                        self.db.session.query(Segment).filter(
+                            Segment.node_id == node_id
+                        ).update(
+                            {
+                                "error": str(e),
+                                "status": SegmentStatus.ERROR,
+                                "enabled": False,
+                                "disabled_at": datetime.now(),
+                                "stopped_at": datetime.now(),
+                            }
+                        )
+                    logging.error(f"Update segment {node_id} enabled failed, {e}")
+
+        except Exception as e:
+            logging.error(f"Update document enabled failed, {e}")
+            origin_enabled = not enabled
+            with self.db.auto_commit():
+                self.db.session.query(Document).filter(
+                    Document.id == document_id
+                ).update(
+                    {
+                        "enabled": origin_enabled,
+                        "disabled_at": None if origin_enabled else datetime.now(),
+                    }
+                )
+        finally:
+            release_lock(self.redis_client, lock_key, lock_value)
+            logging.info(f"释放锁 {lock_key} {lock_value}")
