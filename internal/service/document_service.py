@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from redis import Redis
 from pkg.sqlalchemy import SQLAlchemy
 from sqlalchemy import func
-from internal.task.document_task import build_documents, update_document_enabled
+from internal.task.document_task import (
+    build_documents,
+    update_document_enabled,
+    delete_document,
+)
 from internal.model import Document, Dataset, UploadFile, ProcessRule, Segment
 from internal.exception import NotFoundException, FailException, ForbiddenException
 from internal.entity import (
@@ -325,7 +329,7 @@ class DocumentService:
         # 获取分布式锁
         lock_key = LOCK_DOCUMENT_UPDATE_ENABLED.format(document_id=document_id)
         lock_value = str(uuid4())
-        if not acquire_lock(self.redis_client, lock_key, lock_value, 600):
+        if not acquire_lock(self.redis_client, lock_key, lock_value):
             logging.warning(f"获取锁失败，document_id: {document_id}")
             raise FailException("当前文档正在修改启用状态，请稍后再次尝试")
 
@@ -339,3 +343,27 @@ class DocumentService:
 
         update_document_enabled.delay(document_id, lock_key, lock_value, enabled)
         return
+
+    def delete_document(self, dataset_id: UUID, document_id: UUID):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        doc = (
+            self.db.session.query(Document)
+            .filter(
+                Document.account_id == account_id,
+                Document.dataset_id == dataset_id,
+                Document.id == document_id,
+            )
+            .one_or_none()
+        )
+
+        if doc is None:
+            raise NotFoundException("文档不存在")
+
+        if doc.status not in [DocumentStatus.COMPLETED, DocumentStatus.ERROR]:
+            raise FailException("文档未完成解析，无法删除")
+
+        with self.db.auto_commit():
+            self.db.session.delete(doc)
+
+        delete_document.delay(dataset_id, document_id)

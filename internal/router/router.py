@@ -160,4 +160,9 @@ class Router:
             methods=["PATCH"],
             view_func=self.document_handler.update_document_enabled,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>",
+            methods=["DELETE"],
+            view_func=self.document_handler.delete_document,
+        )
         app.register_blueprint(bp)

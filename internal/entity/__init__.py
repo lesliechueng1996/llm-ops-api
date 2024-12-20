@@ -13,7 +13,11 @@ from .dataset_entity import (
     SegmentStatus,
 )
 from .jieba_entity import STOPWORD_SET
-from .cache_entity import LOCK_DOCUMENT_UPDATE_ENABLED
+from .cache_entity import (
+    LOCK_DOCUMENT_UPDATE_ENABLED,
+    LOCK_KEYWORD_TABLE_UPDATE_KEYWORD_TABLE,
+    LOCK_EXPIRE_TIME,
+)
 
 __all__ = [
     "ALLOWED_IMAGE_EXTENSIONS",
@@ -25,4 +29,6 @@ __all__ = [
     "DocumentStatus",
     "SegmentStatus",
     "LOCK_DOCUMENT_UPDATE_ENABLED",
+    "LOCK_KEYWORD_TABLE_UPDATE_KEYWORD_TABLE",
+    "LOCK_EXPIRE_TIME",
 ]

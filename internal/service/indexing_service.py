@@ -28,6 +28,7 @@ from internal.service import (
 from internal.service.keyword_table_service import KeywordTableService
 from internal.service.process_rule_service import ProcessRuleService
 from langchain_core.documents import Document as LangchainDocument
+from weaviate.classes.query import Filter
 
 
 @inject
@@ -362,3 +363,28 @@ class IndexingService:
         finally:
             release_lock(self.redis_client, lock_key, lock_value)
             logging.info(f"释放锁 {lock_key} {lock_value}")
+
+    def delete_document(self, dataset_id: UUID, document_id: UUID):
+        segment_ids = [
+            str(id)
+            for id, in self.db.session.query(Segment)
+            .with_entities(Segment.id)
+            .filter(
+                Segment.document_id == document_id,
+            )
+            .all()
+        ]
+
+        collection = self.vector_store_service.collection
+        collection.data.delete_many(
+            where=Filter.by_property("document_id").equal(document_id)
+        )
+
+        with self.db.auto_commit():
+            self.db.session.query(Segment).filter(
+                Segment.document_id == document_id
+            ).delete()
+
+        self.keyword_table_service.delete_keyword_table_from_ids(
+            dataset_id=dataset_id, segment_ids=segment_ids
+        )

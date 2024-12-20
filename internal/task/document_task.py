@@ -26,3 +26,12 @@ def update_document_enabled(
 
     indexing_service = injector.get(IndexingService)
     indexing_service.update_document_enabled(document_id, lock_key, lock_value, enabled)
+
+
+@shared_task
+def delete_document(dataset_id: UUID, document_id: UUID):
+    from app.http.module import injector
+    from internal.service import IndexingService
+
+    indexing_service = injector.get(IndexingService)
+    indexing_service.delete_document(dataset_id, document_id)

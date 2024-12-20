@@ -85,3 +85,7 @@ class DocumentHandler:
             dataset_id=dataset_id, document_id=document_id, enabled=req.enabled.data
         )
         return success_message("更新成功")
+
+    def delete_document(self, dataset_id: UUID, document_id: UUID):
+        self.document_service.delete_document(dataset_id, document_id)
+        return success_message("删除成功")

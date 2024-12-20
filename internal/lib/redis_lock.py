@@ -5,10 +5,11 @@
 """
 
 from redis import Redis
+from internal.entity import LOCK_EXPIRE_TIME
 
 
 def acquire_lock(
-    redis_client: Redis, key: str, value: str, expire_time: int = 60
+    redis_client: Redis, key: str, value: str, expire_time: int = LOCK_EXPIRE_TIME
 ) -> bool:
     """
     获取分布式锁
