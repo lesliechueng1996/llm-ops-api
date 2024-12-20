@@ -5,6 +5,8 @@ from logging import Formatter, INFO, getLogger, StreamHandler
 
 
 def init_app(app: Flask):
+    getLogger().setLevel(INFO)
+
     log_folder = path.join(getcwd(), "storage", "log")
     if not path.exists(log_folder):
         makedirs(log_folder)
