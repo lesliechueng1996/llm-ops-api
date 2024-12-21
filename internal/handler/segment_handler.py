@@ -11,10 +11,12 @@ from dataclasses import dataclass
 from internal.schema import (
     GetSegmentsPaginationSchemaReq,
     GetSegmentsPaginationItemSchemaRes,
+    GetSegmentSchemaRes,
+    UpdateSegmentEnabledSchemaReq,
 )
 from internal.exception import ValidateErrorException
 from internal.service import SegmentService
-from pkg.response import success_json
+from pkg.response import success_json, success_message
 from pkg.pagination import PageModel
 
 
@@ -33,3 +35,22 @@ class SegmentHandler:
         )
         schema = GetSegmentsPaginationItemSchemaRes(many=True)
         return success_json(PageModel(schema.dump(segments), paginator))
+
+    def get_segment(self, dataset_id: UUID, document_id: UUID, segment_id: UUID):
+        segment = self.segment_service.get_segment(
+            dataset_id=dataset_id, document_id=document_id, segment_id=segment_id
+        )
+        schema = GetSegmentSchemaRes()
+        return success_json(schema.dump(segment))
+
+    def update_segment_enabled(
+        self, dataset_id: UUID, document_id: UUID, segment_id: UUID
+    ):
+        req = UpdateSegmentEnabledSchemaReq()
+        if not req.validate():
+            return ValidateErrorException(req.errors)
+
+        self.segment_service.update_segment_enabled(
+            str(dataset_id), str(document_id), str(segment_id), req.enabled.data
+        )
+        return success_message("更新成功")

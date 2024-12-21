@@ -173,4 +173,13 @@ class Router:
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments",
             view_func=self.segment_handler.get_segments_pagination,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>",
+            view_func=self.segment_handler.get_segment,
+        )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>/enabled",
+            methods=["PATCH"],
+            view_func=self.segment_handler.update_segment_enabled,
+        )
         app.register_blueprint(bp)
