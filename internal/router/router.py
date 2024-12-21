@@ -201,4 +201,9 @@ class Router:
             methods=["PATCH"],
             view_func=self.segment_handler.update_segment,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>",
+            methods=["DELETE"],
+            view_func=self.segment_handler.delete_segment,
+        )
         app.register_blueprint(bp)

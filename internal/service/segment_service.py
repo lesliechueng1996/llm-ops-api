@@ -355,3 +355,54 @@ class SegmentService:
                     segment.disabled_at = datetime.now()
                     segment.stopped_at = datetime.now()
             raise FailException("更新文档片段记录失败，请稍后尝试")
+
+    def delete_segment(self, dataset_id: str, document_id: str, segment_id: str):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        segment = (
+            self.db.session.query(Segment)
+            .filter(
+                Segment.dataset_id == dataset_id,
+                Segment.document_id == document_id,
+                Segment.account_id == account_id,
+                Segment.id == segment_id,
+            )
+            .one_or_none()
+        )
+        if not segment:
+            raise NotFoundException("该片段不存在")
+
+        if segment.status not in [SegmentStatus.COMPLETED, SegmentStatus.ERROR]:
+            raise FailException("该片段未完成，暂时无法删除")
+
+        document = (
+            self.db.session.query(Document)
+            .filter(Document.id == document_id)
+            .one_or_none()
+        )
+
+        with self.db.auto_commit():
+            self.db.session.delete(segment)
+
+        self.keyword_table_service.delete_keyword_table_from_ids(
+            dataset_id=dataset_id, segment_ids=[segment_id]
+        )
+
+        try:
+            self.vector_store_service.collection.data.delete_by_id(str(segment.node_id))
+        except Exception as e:
+            logging.exception(
+                f"删除文档片段记录失败, segment_id: {segment_id}, 错误信息: {str(e)}"
+            )
+
+        document_character_count, document_token_count = (
+            self.db.session.query(
+                func.coalesce(func.sum(Segment.character_count), 0),
+                func.coalesce(func.sum(Segment.token_count), 0),
+            )
+            .filter(Segment.document_id == document_id)
+            .first()
+        )
+
+        with self.db.auto_commit():
+            document.character_count = document_character_count
+            document.token_count = document_token_count

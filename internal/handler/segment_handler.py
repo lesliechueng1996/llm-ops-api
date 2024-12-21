@@ -74,3 +74,9 @@ class SegmentHandler:
             str(dataset_id), str(document_id), str(segment_id), req
         )
         return success_message("更新成功")
+
+    def delete_segment(self, dataset_id: UUID, document_id: UUID, segment_id: UUID):
+        self.segment_service.delete_segment(
+            str(dataset_id), str(document_id), str(segment_id)
+        )
+        return success_message("删除成功")
