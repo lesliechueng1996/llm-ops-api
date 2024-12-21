@@ -42,6 +42,7 @@ from .segment_schema import (
     GetSegmentSchemaRes,
     UpdateSegmentEnabledSchemaReq,
     CreateSegmentSchemaReq,
+    UpdateSegmentSchemaReq,
 )
 
 __all__ = [
@@ -75,4 +76,5 @@ __all__ = [
     "GetSegmentSchemaRes",
     "UpdateSegmentEnabledSchemaReq",
     "CreateSegmentSchemaReq",
+    "UpdateSegmentSchemaReq",
 ]

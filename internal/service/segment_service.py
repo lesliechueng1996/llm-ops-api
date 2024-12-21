@@ -12,7 +12,11 @@ from internal.lib.helper import generate_text_hash
 from redis import Redis
 from internal.entity import LOCK_SEGMENT_UPDATE_ENABLED
 from pkg.sqlalchemy import SQLAlchemy
-from internal.schema import GetSegmentsPaginationSchemaReq, CreateSegmentSchemaReq
+from internal.schema import (
+    GetSegmentsPaginationSchemaReq,
+    CreateSegmentSchemaReq,
+    UpdateSegmentSchemaReq,
+)
 from pkg.pagination import Paginator
 from internal.model import Segment, Document
 from sqlalchemy import asc
@@ -256,3 +260,98 @@ class SegmentService:
                     segment.disabled_at = datetime.now()
                     segment.stopped_at = datetime.now()
             raise FailException("新增文档片段内容失败")
+
+    def update_segment(
+        self,
+        dataset_id: str,
+        document_id: str,
+        segment_id: str,
+        req: UpdateSegmentSchemaReq,
+    ):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        token = self.embedding_service.calculate_token_count(req.content.data)
+        if token > 1000:
+            raise ValidateErrorException("片段内容的长度不能超过1000 token")
+
+        segment = (
+            self.db.session.query(Segment)
+            .filter(
+                Segment.dataset_id == dataset_id,
+                Segment.document_id == document_id,
+                Segment.account_id == account_id,
+                Segment.id == segment_id,
+            )
+            .one_or_none()
+        )
+        if not segment:
+            raise NotFoundException("该片段不存在")
+
+        if segment.status != SegmentStatus.COMPLETED:
+            raise FailException("该片段尚未完成，暂时无法更新片段")
+
+        if req.keywords.data is None or len(req.keywords.data) == 0:
+            req.keywords.data = self.jieba_service.extract_keywords(
+                req.content.data, 10
+            )
+
+        new_hash = generate_text_hash(req.content.data)
+        required_update = new_hash != segment.hash
+
+        try:
+            with self.db.auto_commit():
+                segment.keywords = req.keywords.data
+                segment.content = req.content.data
+                segment.hash = new_hash
+                segment.character_count = len(req.content.data)
+                segment.token_count = self.embedding_service.calculate_token_count(
+                    req.content.data
+                )
+
+            self.keyword_table_service.delete_keyword_table_from_ids(
+                dataset_id=dataset_id, segment_ids=[segment_id]
+            )
+            self.keyword_table_service.add_keyword_table_from_ids(
+                dataset_id=dataset_id, segment_ids=[segment_id]
+            )
+
+            if required_update:
+                document = (
+                    self.db.session.query(Document)
+                    .filter(Document.id == document_id)
+                    .one_or_none()
+                )
+                if not document:
+                    raise NotFoundException("所属文档不存在")
+
+                document_character_count, document_token_count = (
+                    self.db.session.query(
+                        func.coalesce(func.sum(Segment.character_count), 0),
+                        func.coalesce(func.sum(Segment.token_count), 0),
+                    )
+                    .filter(Segment.document_id == document_id)
+                    .first()
+                )
+                with self.db.auto_commit():
+                    document.character_count = document_character_count
+                    document.token_count = document_token_count
+
+                self.vector_store_service.collection.data.update(
+                    uuid=str(segment.node_id),
+                    properties={"text": req.content.data},
+                    vector=self.embedding_service.embeddings.embed_query(
+                        req.content.data
+                    ),
+                )
+        except Exception as e:
+            logging.exception(
+                f"更新文档片段记录失败, segment_id: {segment}, 错误信息: {str(e)}"
+            )
+            if segment:
+                with self.db.auto_commit():
+                    segment.status = SegmentStatus.ERROR
+                    segment.error = str(e)
+                    segment.enabled = False
+                    segment.disabled_at = datetime.now()
+                    segment.stopped_at = datetime.now()
+            raise FailException("更新文档片段记录失败，请稍后尝试")

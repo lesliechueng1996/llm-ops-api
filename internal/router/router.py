@@ -187,4 +187,9 @@ class Router:
             methods=["POST"],
             view_func=self.segment_handler.create_segment,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>",
+            methods=["PATCH"],
+            view_func=self.segment_handler.update_segment,
+        )
         app.register_blueprint(bp)
