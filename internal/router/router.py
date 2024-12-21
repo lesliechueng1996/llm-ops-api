@@ -133,6 +133,11 @@ class Router:
             "/datasets",
             view_func=self.dataset_handler.get_datasets_pagination,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/hit",
+            methods=["POST"],
+            view_func=self.dataset_handler.hit_dataset,
+        )
 
         # Document
         bp.add_url_rule(

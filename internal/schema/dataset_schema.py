@@ -5,10 +5,11 @@
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField
-from wtforms.validators import DataRequired, Length, URL, Optional
+from wtforms import StringField, IntegerField, FloatField
+from wtforms.validators import DataRequired, Length, URL, Optional, AnyOf, NumberRange
 from marshmallow import Schema, fields, pre_dump
 from pkg.pagination import PaginationReq
+from internal.entity import RetrievalStrategy
 
 
 class CreateDatasetSchemaReq(FlaskForm):
@@ -112,3 +113,36 @@ class GetDatasetsPaginationItemSchemaRes(Schema):
             "updated_at": int(data["updated_at"].timestamp()),
             "created_at": int(data["created_at"].timestamp()),
         }
+
+
+class HitDatasetSchemaReq(FlaskForm):
+    query = StringField(
+        "query",
+        validators=[
+            DataRequired(message="查询内容不能为空"),
+            Length(max=200, message="查询内容不能超过200字符"),
+        ],
+    )
+    retrieval_strategy = StringField(
+        "retrieval_strategy",
+        validators=[
+            DataRequired(message="检索策略不能为空"),
+            AnyOf(
+                [strategy.value for strategy in RetrievalStrategy],
+                message="检索策略不合法",
+            ),
+        ],
+    )
+    k = IntegerField(
+        "k",
+        validators=[
+            DataRequired(message="k值不能为空"),
+            NumberRange(min=1, max=10, message="k值必须在1-10之间"),
+        ],
+    )
+    score = FloatField(
+        "score",
+        validators=[
+            NumberRange(min=0, max=0.99, message="得分必须在0-0.99之间"),
+        ],
+    )

@@ -11,6 +11,8 @@ from .dataset_entity import (
     DEFAULT_PROCESS_RULE,
     DocumentStatus,
     SegmentStatus,
+    RetrievalStrategy,
+    RetrievalSource,
 )
 from .jieba_entity import STOPWORD_SET
 from .cache_entity import (
@@ -33,4 +35,6 @@ __all__ = [
     "LOCK_KEYWORD_TABLE_UPDATE_KEYWORD_TABLE",
     "LOCK_EXPIRE_TIME",
     "LOCK_SEGMENT_UPDATE_ENABLED",
+    "RetrievalStrategy",
+    "RetrievalSource",
 ]

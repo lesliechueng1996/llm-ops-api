@@ -13,6 +13,7 @@ from internal.schema import (
     GetDatasetSchemaRes,
     GetDatasetsPaginationSchemaReq,
     GetDatasetsPaginationItemSchemaRes,
+    HitDatasetSchemaReq,
 )
 from internal.service import DatasetService
 from pkg.pagination import PageModel
@@ -55,3 +56,11 @@ class DatasetHandler:
 
         dump_list = schema.dump(datasets)
         return success_json(PageModel(dump_list, paginator))
+
+    def hit_dataset(self, dataset_id: UUID):
+        req = HitDatasetSchemaReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        result = self.dataset_service.hit_dataset(dataset_id, req)
+        return success_json(result)

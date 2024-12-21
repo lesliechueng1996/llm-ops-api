@@ -4,25 +4,30 @@
 @File   : dataset_service.py
 """
 
+from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
 from internal.schema import (
     CreateDatasetSchemaReq,
     UpdateDatasetSchemaReq,
     GetDatasetsPaginationSchemaReq,
+    HitDatasetSchemaReq,
 )
+from internal.service.retrieval_service import RetrievalService
 from pkg.sqlalchemy import SQLAlchemy
-from internal.model import Dataset, Document, Segment, AppDatasetJoin
-from internal.entity import DEFAULT_DATASET_DESCRIPTION_FORMATTER
+from internal.model import Dataset, Document, Segment, AppDatasetJoin, UploadFile
+from internal.entity import DEFAULT_DATASET_DESCRIPTION_FORMATTER, RetrievalSource
 from internal.exception import ValidateErrorException, NotFoundException
 from sqlalchemy import func, desc
 from pkg.pagination import Paginator
+from internal.lib.helper import datetime_to_timestamp
 
 
 @inject
 @dataclass
 class DatasetService:
     db: SQLAlchemy
+    retrieval_service: RetrievalService
 
     def create_dataset(self, req: CreateDatasetSchemaReq):
         account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
@@ -171,3 +176,80 @@ class DatasetService:
             }
             for dataset in datasets
         ], paginator
+
+    def hit_dataset(self, dataset_id: UUID, req: HitDatasetSchemaReq):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        dataset = (
+            self.db.session.query(Dataset)
+            .filter(Dataset.account_id == account_id, Dataset.id == dataset_id)
+            .one_or_none()
+        )
+        if not dataset:
+            raise NotFoundException("知识库不存在")
+
+        lc_docs = self.retrieval_service.search_in_databases(
+            dataset_ids=[dataset_id],
+            query=req.query.data,
+            retrieval_strategy=req.retrieval_strategy.data,
+            k=req.k.data,
+            score=req.score.data,
+            retrival_source=RetrievalSource.HIT_TESTING,
+        )
+        segment_lc_doc_map = {
+            str(lc_doc.metadata["segment_id"]): lc_doc for lc_doc in lc_docs
+        }
+
+        segment_ids = [str(lc_doc.metadata["segment_id"]) for lc_doc in lc_docs]
+        segments = (
+            self.db.session.query(Segment).filter(Segment.id.in_(segment_ids)).all()
+        )
+
+        document_ids = [segment.document_id for segment in segments]
+        documents = (
+            self.db.session.query(Document).filter(Document.id.in_(document_ids)).all()
+        )
+        document_map = {str(document.id): document for document in documents}
+
+        upload_file_ids = [document.upload_file_id for document in documents]
+        upload_files = (
+            self.db.session.query(UploadFile)
+            .filter(UploadFile.id.in_(upload_file_ids))
+            .all()
+        )
+        upload_file_map = {
+            str(upload_file.id): upload_file for upload_file in upload_files
+        }
+
+        results = []
+
+        for segment in segments:
+            document = document_map[str(segment.document_id)]
+            upload_file = upload_file_map[str(document.upload_file_id)]
+
+            result = {
+                "id": segment.id,
+                "document": {
+                    "id": document.id,
+                    "name": document.name,
+                    "extension": upload_file.extension,
+                    "mime_type": upload_file.mime_type,
+                },
+                "dataset_id": segment.dataset_id,
+                "score": segment_lc_doc_map[str(segment.id)].metadata["score"],
+                "position": segment.position,
+                "content": segment.content,
+                "keywords": segment.keywords,
+                "character_count": segment.character_count,
+                "token_count": segment.token_count,
+                "hit_count": segment.hit_count,
+                "enabled": segment.enabled,
+                "disabled_at": datetime_to_timestamp(segment.disabled_at),
+                "status": segment.status,
+                "error": segment.error,
+                "updated_at": datetime_to_timestamp(segment.updated_at),
+                "created_at": datetime_to_timestamp(segment.created_at),
+            }
+            results.append(result)
+
+        return results

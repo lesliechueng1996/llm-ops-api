@@ -25,6 +25,7 @@ from .dataset_schema import (
     GetDatasetSchemaRes,
     GetDatasetsPaginationSchemaReq,
     GetDatasetsPaginationItemSchemaRes,
+    HitDatasetSchemaReq,
 )
 from .schema import DictField, ListField
 from .document_schema import (
@@ -77,4 +78,5 @@ __all__ = [
     "UpdateSegmentEnabledSchemaReq",
     "CreateSegmentSchemaReq",
     "UpdateSegmentSchemaReq",
+    "HitDatasetSchemaReq",
 ]
