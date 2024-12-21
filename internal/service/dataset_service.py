@@ -4,6 +4,7 @@
 @File   : dataset_service.py
 """
 
+import logging
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
@@ -24,10 +25,11 @@ from internal.model import (
     DatasetQuery,
 )
 from internal.entity import DEFAULT_DATASET_DESCRIPTION_FORMATTER, RetrievalSource
-from internal.exception import ValidateErrorException, NotFoundException
+from internal.exception import ValidateErrorException, NotFoundException, FailException
 from sqlalchemy import func, desc
 from pkg.pagination import Paginator
 from internal.lib.helper import datetime_to_timestamp
+from internal.task.dataset_task import delete_dataset
 
 
 @inject
@@ -279,3 +281,29 @@ class DatasetService:
             .limit(10)
             .all()
         )
+
+    def delete_dataset(self, dataset_id: UUID):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        dataset = (
+            self.db.session.query(Dataset)
+            .filter(Dataset.id == dataset_id, Dataset.account_id == account_id)
+            .one_or_none()
+        )
+        if not dataset:
+            raise NotFoundException("知识库不存在")
+
+        try:
+            with self.db.auto_commit():
+                self.db.session.delete(dataset)
+
+                self.db.session.query(AppDatasetJoin).filter(
+                    AppDatasetJoin.dataset_id == dataset_id
+                ).delete()
+
+                delete_dataset.delay(dataset_id)
+        except Exception as e:
+            logging.exception(
+                f"删除知识库失败, dataset_id: {dataset_id}, 错误信息: {str(e)}"
+            )
+            raise FailException("删除知识库失败，请稍后重试")

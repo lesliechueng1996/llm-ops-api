@@ -70,3 +70,7 @@ class DatasetHandler:
         dataset_queries = self.dataset_service.get_dataset_queries(dataset_id)
         schema = GetDatasetQueriesSchemaRes(many=True)
         return success_json(schema.dump(dataset_queries))
+
+    def delete_dataset(self, dataset_id: UUID):
+        self.dataset_service.delete_dataset(dataset_id)
+        return success_message("删除知识库成功")

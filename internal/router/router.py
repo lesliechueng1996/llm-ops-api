@@ -142,6 +142,11 @@ class Router:
             "/datasets/<uuid:dataset_id>/queries",
             view_func=self.dataset_handler.get_dataset_queries,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>",
+            methods=["DELETE"],
+            view_func=self.dataset_handler.delete_dataset,
+        )
 
         # Document
         bp.add_url_rule(

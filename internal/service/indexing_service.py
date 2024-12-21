@@ -15,7 +15,14 @@ from redis import Redis
 from sqlalchemy import func
 from internal.lib.redis_lock import release_lock
 from pkg.sqlalchemy import SQLAlchemy
-from internal.model import Document, UploadFile, ProcessRule, Segment, KeywordTable
+from internal.model import (
+    Document,
+    UploadFile,
+    ProcessRule,
+    Segment,
+    KeywordTable,
+    DatasetQuery,
+)
 from internal.lib import generate_text_hash
 from internal.entity import DocumentStatus, SegmentStatus
 from datetime import datetime
@@ -401,3 +408,35 @@ class IndexingService:
         self.keyword_table_service.delete_keyword_table_from_ids(
             dataset_id=dataset_id, segment_ids=segment_ids
         )
+
+    def delete_dataset(self, dataset_id: UUID):
+        try:
+            with self.db.auto_commit():
+                # 1.删除关联的文档记录
+                self.db.session.query(Document).filter(
+                    Document.dataset_id == dataset_id,
+                ).delete()
+
+                # 2.删除关联的片段记录
+                self.db.session.query(Segment).filter(
+                    Segment.dataset_id == dataset_id,
+                ).delete()
+
+                # 3.删除关联的关键词表记录
+                self.db.session.query(KeywordTable).filter(
+                    KeywordTable.dataset_id == dataset_id,
+                ).delete()
+
+                # 4.删除知识库查询记录
+                self.db.session.query(DatasetQuery).filter(
+                    DatasetQuery.dataset_id == dataset_id,
+                ).delete()
+
+            # 5.调用向量数据库删除知识库的关联记录
+            self.vector_database_service.collection.data.delete_many(
+                where=Filter.by_property("dataset_id").equal(str(dataset_id))
+            )
+        except Exception as e:
+            logging.exception(
+                f"异步删除知识库关联内容出错, dataset_id: {dataset_id}, 错误信息: {str(e)}"
+            )
