@@ -36,6 +36,10 @@ from .document_schema import (
     GetDocumentsPaginationItemSchemaRes,
     UpdateDocumentEnabledSchemaReq,
 )
+from .segment_schema import (
+    GetSegmentsPaginationSchemaReq,
+    GetSegmentsPaginationItemSchemaRes,
+)
 
 __all__ = [
     "CompletionReq",
@@ -63,4 +67,6 @@ __all__ = [
     "GetDocumentsPaginationSchemaReq",
     "GetDocumentsPaginationItemSchemaRes",
     "UpdateDocumentEnabledSchemaReq",
+    "GetSegmentsPaginationSchemaReq",
+    "GetSegmentsPaginationItemSchemaRes",
 ]

@@ -15,6 +15,7 @@ from internal.handler import (
     UploadFileHandler,
     DatasetHandler,
     DocumentHandler,
+    SegmentHandler,
 )
 
 
@@ -29,6 +30,7 @@ class Router:
     upload_file_handler: UploadFileHandler
     dataset_handler: DatasetHandler
     document_handler: DocumentHandler
+    segment_handler: SegmentHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -164,5 +166,11 @@ class Router:
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>",
             methods=["DELETE"],
             view_func=self.document_handler.delete_document,
+        )
+
+        # Segment
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments",
+            view_func=self.segment_handler.get_segments_pagination,
         )
         app.register_blueprint(bp)
