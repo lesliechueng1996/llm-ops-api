@@ -19,6 +19,7 @@ from internal.schema import (
 from pkg.response import validate_error_json, success_json, success_message
 from pkg.pagination import PageModel
 from internal.service import DocumentService
+from flask import request
 
 
 @inject
@@ -64,7 +65,7 @@ class DocumentHandler:
         return success_message("更新成功")
 
     def get_documents_pagination(self, dataset_id: UUID):
-        req = GetDocumentsPaginationSchemaReq()
+        req = GetDocumentsPaginationSchemaReq(request.args)
         if not req.validate():
             return validate_error_json(req.errors)
 
