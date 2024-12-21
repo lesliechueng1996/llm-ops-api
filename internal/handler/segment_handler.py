@@ -13,6 +13,7 @@ from internal.schema import (
     GetSegmentsPaginationItemSchemaRes,
     GetSegmentSchemaRes,
     UpdateSegmentEnabledSchemaReq,
+    CreateSegmentSchemaReq,
 )
 from internal.exception import ValidateErrorException
 from internal.service import SegmentService
@@ -54,3 +55,11 @@ class SegmentHandler:
             str(dataset_id), str(document_id), str(segment_id), req.enabled.data
         )
         return success_message("更新成功")
+
+    def create_segment(self, dataset_id: UUID, document_id: UUID):
+        req = CreateSegmentSchemaReq()
+        if not req.validate():
+            return ValidateErrorException(req.errors)
+
+        self.segment_service.create_segment(str(dataset_id), str(document_id), req)
+        return success_message("创建成功")

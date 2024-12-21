@@ -41,6 +41,7 @@ from .segment_schema import (
     GetSegmentsPaginationItemSchemaRes,
     GetSegmentSchemaRes,
     UpdateSegmentEnabledSchemaReq,
+    CreateSegmentSchemaReq,
 )
 
 __all__ = [
@@ -73,4 +74,5 @@ __all__ = [
     "GetSegmentsPaginationItemSchemaRes",
     "GetSegmentSchemaRes",
     "UpdateSegmentEnabledSchemaReq",
+    "CreateSegmentSchemaReq",
 ]

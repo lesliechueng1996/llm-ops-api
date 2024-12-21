@@ -7,11 +7,12 @@
 from pkg.pagination import PaginationReq
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, StringField
-from wtforms.validators import Optional
+from wtforms.validators import Optional, DataRequired
 from marshmallow import Schema, fields, pre_dump
 from internal.model import Segment
 from internal.lib.helper import datetime_to_timestamp
 from internal.exception import ValidateErrorException
+from .schema import ListField
 
 
 class GetSegmentsPaginationSchemaReq(PaginationReq):
@@ -102,3 +103,26 @@ class UpdateSegmentEnabledSchemaReq(FlaskForm):
     def validate_enabled(self, field: BooleanField):
         if not isinstance(field.data, bool):
             raise ValidateErrorException("enabled字段必须是布尔值")
+
+
+class CreateSegmentSchemaReq(FlaskForm):
+    content = StringField(
+        "content", validators=[DataRequired(message="片段内容不能为空")]
+    )
+    keywords = ListField("keywords")
+
+    def validate_keywords(self, field: ListField):
+        if field.data is None:
+            field.data = []
+
+        if not isinstance(field.data, list):
+            raise ValidateErrorException("关键词字段必须是列表")
+
+        if len(field.data) > 10:
+            raise ValidateErrorException("关键词最多10个")
+
+        for keyword in field.data:
+            if not isinstance(keyword, str):
+                raise ValidateErrorException("关键词必顫是字符串")
+
+        field.data = list(dict.fromkeys(field.data))
