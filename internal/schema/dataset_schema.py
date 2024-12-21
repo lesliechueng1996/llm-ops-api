@@ -10,6 +10,8 @@ from wtforms.validators import DataRequired, Length, URL, Optional, AnyOf, Numbe
 from marshmallow import Schema, fields, pre_dump
 from pkg.pagination import PaginationReq
 from internal.entity import RetrievalStrategy
+from internal.model import DatasetQuery
+from internal.lib.helper import datetime_to_timestamp
 
 
 class CreateDatasetSchemaReq(FlaskForm):
@@ -146,3 +148,21 @@ class HitDatasetSchemaReq(FlaskForm):
             NumberRange(min=0, max=0.99, message="得分必须在0-0.99之间"),
         ],
     )
+
+
+class GetDatasetQueriesSchemaRes(Schema):
+    id = fields.UUID()
+    dataset_id = fields.UUID()
+    query = fields.String()
+    source = fields.String()
+    created_at = fields.Integer()
+
+    @pre_dump
+    def process_data(self, data: DatasetQuery, **kwargs):
+        return {
+            "id": data.id,
+            "dataset_id": data.dataset_id,
+            "query": data.query,
+            "source": data.source,
+            "created_at": datetime_to_timestamp(data.created_at),
+        }

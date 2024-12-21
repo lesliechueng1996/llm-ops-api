@@ -138,6 +138,10 @@ class Router:
             methods=["POST"],
             view_func=self.dataset_handler.hit_dataset,
         )
+        bp.add_url_rule(
+            "/datasets/<uuid:dataset_id>/queries",
+            view_func=self.dataset_handler.get_dataset_queries,
+        )
 
         # Document
         bp.add_url_rule(

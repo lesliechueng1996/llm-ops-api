@@ -15,7 +15,14 @@ from internal.schema import (
 )
 from internal.service.retrieval_service import RetrievalService
 from pkg.sqlalchemy import SQLAlchemy
-from internal.model import Dataset, Document, Segment, AppDatasetJoin, UploadFile
+from internal.model import (
+    Dataset,
+    Document,
+    Segment,
+    AppDatasetJoin,
+    UploadFile,
+    DatasetQuery,
+)
 from internal.entity import DEFAULT_DATASET_DESCRIPTION_FORMATTER, RetrievalSource
 from internal.exception import ValidateErrorException, NotFoundException
 from sqlalchemy import func, desc
@@ -253,3 +260,22 @@ class DatasetService:
             results.append(result)
 
         return results
+
+    def get_dataset_queries(self, dataset_id: UUID):
+        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+
+        dataset = (
+            self.db.session.query(Dataset)
+            .filter(Dataset.id == dataset_id, Dataset.account_id == account_id)
+            .one_or_none()
+        )
+        if not dataset:
+            raise NotFoundException("知识库不存在")
+
+        return (
+            self.db.session.query(DatasetQuery)
+            .filter(DatasetQuery.dataset_id == dataset_id)
+            .order_by(desc(DatasetQuery.created_at))
+            .limit(10)
+            .all()
+        )

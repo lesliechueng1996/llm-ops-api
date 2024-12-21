@@ -14,6 +14,7 @@ from internal.schema import (
     GetDatasetsPaginationSchemaReq,
     GetDatasetsPaginationItemSchemaRes,
     HitDatasetSchemaReq,
+    GetDatasetQueriesSchemaRes,
 )
 from internal.service import DatasetService
 from pkg.pagination import PageModel
@@ -64,3 +65,8 @@ class DatasetHandler:
 
         result = self.dataset_service.hit_dataset(dataset_id, req)
         return success_json(result)
+
+    def get_dataset_queries(self, dataset_id: UUID):
+        dataset_queries = self.dataset_service.get_dataset_queries(dataset_id)
+        schema = GetDatasetQueriesSchemaRes(many=True)
+        return success_json(schema.dump(dataset_queries))
