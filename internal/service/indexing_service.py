@@ -316,7 +316,7 @@ class IndexingService:
 
             segments = (
                 self.db.session.query(Segment)
-                .with_entities(Segment.id, Segment.node_id)
+                .with_entities(Segment.id, Segment.node_id, Segment.enabled)
                 .filter(
                     Segment.document_id == document_id,
                     Segment.status == SegmentStatus.COMPLETED,
@@ -324,7 +324,8 @@ class IndexingService:
                 .all()
             )
 
-            node_ids = [node_id for _, node_id in segments]
+            node_ids = [node_id for _, node_id, _ in segments]
+            segment_ids = [segment_id for segment_id, _, _ in segments]
 
             collection = self.vector_store_service.collection
             for node_id in node_ids:
@@ -347,6 +348,18 @@ class IndexingService:
                             }
                         )
                     logging.error(f"Update segment {node_id} enabled failed, {e}")
+
+            if enabled is True:
+                enabled_segment_ids = [
+                    id for id, _, enabled in segments if enabled is True
+                ]
+                self.keyword_table_service.add_keyword_table_from_ids(
+                    document.dataset_id, enabled_segment_ids
+                )
+            else:
+                self.keyword_table_service.delete_keyword_table_from_ids(
+                    document.dataset_id, segment_ids
+                )
 
         except Exception as e:
             logging.error(f"Update document enabled failed, {e}")

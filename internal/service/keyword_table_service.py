@@ -10,7 +10,7 @@ from injector import inject
 from dataclasses import dataclass
 from redis import Redis
 from pkg.sqlalchemy import SQLAlchemy
-from internal.model import KeywordTable
+from internal.model import KeywordTable, Segment
 from internal.entity import LOCK_KEYWORD_TABLE_UPDATE_KEYWORD_TABLE, LOCK_EXPIRE_TIME
 
 
@@ -63,3 +63,38 @@ class KeywordTableService:
             )
             with self.db.auto_commit():
                 keyword_table.keyword_table = remaining_keyword_table_map
+
+    def add_keyword_table_from_ids(self, dataset_id: UUID, segment_ids: list[UUID]):
+        lock_key = LOCK_KEYWORD_TABLE_UPDATE_KEYWORD_TABLE.format(dataset_id=dataset_id)
+        with self.redis_client.lock(lock_key, LOCK_EXPIRE_TIME):
+            logging.info(f"获取锁 {lock_key}")
+
+            keyword_table = self.get_keyword_table_from_dataset_id(dataset_id)
+            all_keyword_table_map = {
+                field: set(value)
+                for field, value in keyword_table.keyword_table.items()
+            }
+            logging.info(
+                f"before add keyword table count: {len(all_keyword_table_map)}, dataset_id: {dataset_id}"
+            )
+
+            segments = (
+                self.db.session.query(Segment)
+                .with_entities(Segment.id, Segment.keywords)
+                .filter(Segment.id.in_(segment_ids))
+                .all()
+            )
+
+            for id, keyword in segments:
+                for k in keyword:
+                    if k not in all_keyword_table_map:
+                        all_keyword_table_map[k] = set()
+                    all_keyword_table_map[k].add(str(id))
+
+            logging.info(
+                f"After add keyword table count: {len(all_keyword_table_map)}, dataset_id: {dataset_id}"
+            )
+            with self.db.auto_commit():
+                keyword_table.keyword_table = {
+                    field: list(value) for field, value in all_keyword_table_map.items()
+                }
