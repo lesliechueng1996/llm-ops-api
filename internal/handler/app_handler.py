@@ -117,7 +117,9 @@ class AppHandler:
                             {
                                 "id": id,
                                 "event": "agent_thought",
-                                "data": json.dumps(chunk.tool_call_chunks),
+                                "data": json.dumps(
+                                    chunk.tool_call_chunks, ensure_ascii=False
+                                ),
                             }
                         )
                     else:
@@ -125,7 +127,7 @@ class AppHandler:
                             {
                                 "id": id,
                                 "event": "agent_message",
-                                "data": json.dumps([chunk.content]),
+                                "data": chunk.content,
                             }
                         )
                 return {"messages": [gathered]}
@@ -140,7 +142,7 @@ class AppHandler:
                     tool_result = tool.invoke(tool_call["args"])
                     tool_messages.append(
                         ToolMessage(
-                            content=json.dumps(tool_result),
+                            content=json.dumps(tool_result, ensure_ascii=False),
                             tool_call_id=tool_call["id"],
                             name=tool_call["name"],
                         )
@@ -149,7 +151,7 @@ class AppHandler:
                         {
                             "id": str(uuid4()),
                             "event": "agent_action",
-                            "data": json.dumps(tool_result),
+                            "data": json.dumps(tool_result, ensure_ascii=False),
                         }
                     )
                 return {"messages": tool_messages}
@@ -184,7 +186,7 @@ class AppHandler:
                 item = queue.get()
                 if item is None:
                     break
-                yield f"event: {item.get('event')}\ndata: {json.dumps(item)}\n\n"
+                yield f"event: {item.get('event')}\ndata: {json.dumps(item, ensure_ascii=False)}\n\n"
                 queue.task_done()
 
         return compact_generate_response(stream_event_response())
