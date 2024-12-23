@@ -10,7 +10,12 @@ from typing import Any, Generator, Literal
 from flask import request
 import os
 from internal.schema import CompletionReq
-from internal.service import AppService, VectorStoreService, JiebaService
+from internal.service import (
+    AppService,
+    VectorStoreService,
+    JiebaService,
+    ConversationService,
+)
 from pkg.response import (
     validate_error_json,
     success_json,
@@ -31,7 +36,6 @@ from operator import itemgetter
 from langchain_core.tracers.schemas import Run
 from internal.core.file_extractor import FileExtractor
 from pkg.sqlalchemy import SQLAlchemy
-from internal.task.document_task import build_documents
 from langgraph.graph import MessagesState, END, START, StateGraph
 from langchain_openai import ChatOpenAI
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
@@ -50,9 +54,16 @@ class AppHandler:
     db: SQLAlchemy
     jieba_service: JiebaService
     builtin_provider_manager: BuiltinProviderManager
+    conversation_service: ConversationService
 
     def ping(self):
-        build_documents.delay(["46db30d1-3199-4e79-a0cd-abf12fa6858f"])
+        summary = self.conversation_service.summary("你好", "你好, 你有什么问题吗？")
+        name = self.conversation_service.generate_conversation_name(
+            "请帮我介绍一下LLM，以及他和 agent 有什么异同"
+        )
+
+        print("summary", summary)
+        print("name", name)
         return success_message("pong")
 
     @classmethod

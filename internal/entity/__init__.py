@@ -21,6 +21,11 @@ from .cache_entity import (
     LOCK_EXPIRE_TIME,
     LOCK_SEGMENT_UPDATE_ENABLED,
 )
+from .conversation_entity import (
+    SUMMARIZER_TEMPLATE,
+    CONVERSATION_NAME_TEMPLATE,
+    ConversationInfo,
+)
 
 __all__ = [
     "ALLOWED_IMAGE_EXTENSIONS",
@@ -37,4 +42,7 @@ __all__ = [
     "LOCK_SEGMENT_UPDATE_ENABLED",
     "RetrievalStrategy",
     "RetrievalSource",
+    "SUMMARIZER_TEMPLATE",
+    "CONVERSATION_NAME_TEMPLATE",
+    "ConversationInfo",
 ]
