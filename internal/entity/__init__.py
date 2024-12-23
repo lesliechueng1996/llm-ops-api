@@ -25,6 +25,7 @@ from .conversation_entity import (
     SUMMARIZER_TEMPLATE,
     CONVERSATION_NAME_TEMPLATE,
     ConversationInfo,
+    MessageStatus,
 )
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     "SUMMARIZER_TEMPLATE",
     "CONVERSATION_NAME_TEMPLATE",
     "ConversationInfo",
+    "MessageStatus",
 ]

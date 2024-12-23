@@ -57,13 +57,23 @@ class AppHandler:
     conversation_service: ConversationService
 
     def ping(self):
-        summary = self.conversation_service.summary("你好", "你好, 你有什么问题吗？")
-        name = self.conversation_service.generate_conversation_name(
-            "请帮我介绍一下LLM，以及他和 agent 有什么异同"
+        from internal.core.agent.agents.function_call_agent import FunctionCallAgent
+        from internal.core.agent.entities.agent_entity import AgentConfig
+
+        config = AgentConfig(
+            llm=ChatOpenAI(
+                api_key=os.getenv("OPENAI_KEY"),
+                base_url=os.getenv("OPENAI_API_URL"),
+                model="gpt-4o-mini",
+            ),
+            preset_prompt="你是一个诗人，可以根据用户的输入生成诗歌。",
         )
 
-        print("summary", summary)
-        print("name", name)
+        agent = FunctionCallAgent(config)
+
+        status = agent.run("程序员")
+        print(status["messages"][-1].content)
+
         return success_message("pong")
 
     @classmethod

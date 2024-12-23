@@ -5,6 +5,7 @@
 """
 
 from pydantic import BaseModel, Field
+from enum import Enum
 
 SUMMARIZER_TEMPLATE = """逐步总结提供的对话内容，在之前的总结基础上继续添加并返回一个新的总结。
 
@@ -88,3 +89,9 @@ class ConversationInfo(BaseModel):
             "尤其是用户问题针对模型本身时，可以通过适当的方式加入趣味性。"
         )
     )
+
+
+class MessageStatus(str, Enum):
+    NORMAL = "normal"
+    STOP = "stop"
+    ERROR = "error"
