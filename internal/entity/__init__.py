@@ -26,6 +26,7 @@ from .conversation_entity import (
     CONVERSATION_NAME_TEMPLATE,
     ConversationInfo,
     MessageStatus,
+    InvokeFrom,
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     "CONVERSATION_NAME_TEMPLATE",
     "ConversationInfo",
     "MessageStatus",
+    "InvokeFrom",
 ]

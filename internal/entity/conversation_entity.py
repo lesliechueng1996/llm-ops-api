@@ -95,3 +95,11 @@ class MessageStatus(str, Enum):
     NORMAL = "normal"
     STOP = "stop"
     ERROR = "error"
+
+
+class InvokeFrom(str, Enum):
+    """会话调用来源"""
+
+    SERVICE_API = "service_api"  # 开放api服务调用
+    WEB_APP = "web_app"  # web应用
+    DEBUGGER = "debugger"  # 调试页面

@@ -9,6 +9,10 @@ from threading import Thread
 from typing import Any, Generator, Literal
 from flask import request
 import os
+
+from redis import Redis
+from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
+from internal.entity.conversation_entity import InvokeFrom
 from internal.schema import CompletionReq
 from internal.service import (
     AppService,
@@ -36,11 +40,10 @@ from operator import itemgetter
 from langchain_core.tracers.schemas import Run
 from internal.core.file_extractor import FileExtractor
 from pkg.sqlalchemy import SQLAlchemy
-from langgraph.graph import MessagesState, END, START, StateGraph
 from langchain_openai import ChatOpenAI
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
-from queue import Queue
-from langchain_core.messages import ToolMessage
+from internal.core.agent.agents.function_call_agent import FunctionCallAgent
+from internal.core.agent.entities.agent_entity import AgentConfig
 
 
 @inject
@@ -55,11 +58,9 @@ class AppHandler:
     jieba_service: JiebaService
     builtin_provider_manager: BuiltinProviderManager
     conversation_service: ConversationService
+    redis_client: Redis
 
     def ping(self):
-        from internal.core.agent.agents.function_call_agent import FunctionCallAgent
-        from internal.core.agent.entities.agent_entity import AgentConfig
-
         config = AgentConfig(
             llm=ChatOpenAI(
                 api_key=os.getenv("OPENAI_KEY"),
@@ -96,119 +97,48 @@ class AppHandler:
         if not req.validate():
             return validate_error_json(req.errors)
 
-        query = req.query.data
-        queue = Queue()
+        tools = [
+            self.builtin_provider_manager.get_tool("google", "google_serper")(),
+            self.builtin_provider_manager.get_tool("gaode", "gaode_weather")(),
+            self.builtin_provider_manager.get_tool("dalle", "dalle3")(),
+        ]
 
-        def graph_app() -> None:
+        config = AgentConfig(
+            llm=ChatOpenAI(
+                api_key=os.getenv("OPENAI_KEY"),
+                base_url=os.getenv("OPENAI_API_URL"),
+                model="gpt-4o-mini",
+            ),
+            enable_long_term_memory=True,
+            tools=tools,
+        )
 
-            tools = [
-                self.builtin_provider_manager.get_tool("google", "google_serper")(),
-                self.builtin_provider_manager.get_tool("gaode", "gaode_weather")(),
-                self.builtin_provider_manager.get_tool("dalle", "dalle3")(),
-            ]
+        agent_queue_manager = AgentQueueManager(
+            user_id=uuid4(),
+            task_id=uuid4(),
+            invoke_from=InvokeFrom.DEBUGGER,
+            redis_client=self.redis_client,
+        )
 
-            def chatbot(state: MessagesState) -> MessagesState:
-                llm = ChatOpenAI(
-                    api_key=os.getenv("OPENAI_KEY"),
-                    base_url=os.getenv("OPENAI_API_URL"),
-                    model="gpt-4o-mini",
-                    temperature=0.7,
-                ).bind_tools(tools)
-
-                chunks = llm.stream(state["messages"])
-
-                is_first_chunk = True
-                is_tool_call = False
-                gathered = None
-                id = str(uuid4())
-                for chunk in chunks:
-                    # Some models may return empty chunk for the first chunk
-                    if is_first_chunk and chunk.content == "" and not chunk.tool_calls:
-                        continue
-
-                    if is_first_chunk:
-                        is_first_chunk = False
-                        gathered = chunk
-                    else:
-                        gathered = gathered + chunk
-
-                    if chunk.tool_calls or is_tool_call:
-                        is_tool_call = True
-                        queue.put(
-                            {
-                                "id": id,
-                                "event": "agent_thought",
-                                "data": json.dumps(
-                                    chunk.tool_call_chunks, ensure_ascii=False
-                                ),
-                            }
-                        )
-                    else:
-                        queue.put(
-                            {
-                                "id": id,
-                                "event": "agent_message",
-                                "data": chunk.content,
-                            }
-                        )
-                return {"messages": [gathered]}
-
-            def tool_executor(state: MessagesState) -> MessagesState:
-                last_message = state["messages"][-1]
-                tool_name_map = {tool.name: tool for tool in tools}
-
-                tool_messages = []
-                for tool_call in last_message.tool_calls:
-                    tool = tool_name_map[tool_call["name"]]
-                    tool_result = tool.invoke(tool_call["args"])
-                    tool_messages.append(
-                        ToolMessage(
-                            content=json.dumps(tool_result, ensure_ascii=False),
-                            tool_call_id=tool_call["id"],
-                            name=tool_call["name"],
-                        )
-                    )
-                    queue.put(
-                        {
-                            "id": str(uuid4()),
-                            "event": "agent_action",
-                            "data": json.dumps(tool_result, ensure_ascii=False),
-                        }
-                    )
-                return {"messages": tool_messages}
-
-            def route(state: MessagesState) -> Literal["__end__", "tool_executor"]:
-                last_message = state["messages"][-1]
-                if (
-                    hasattr(last_message, "tool_calls")
-                    and len(last_message.tool_calls) > 0
-                ):
-                    return "tool_executor"
-                return END
-
-            graph_builder = StateGraph(MessagesState)
-            graph_builder.add_node("chatbot", chatbot)
-            graph_builder.add_node("tool_executor", tool_executor)
-
-            graph_builder.add_edge(START, "chatbot")
-            graph_builder.add_conditional_edges("chatbot", route)
-            graph_builder.add_edge("tool_executor", "chatbot")
-
-            graph = graph_builder.compile()
-            result = graph.invoke({"messages": [("human", query)]})
-            print("最终结果", result)
-            queue.put(None)
-
-        t = Thread(target=graph_app)
-        t.start()
+        agent = FunctionCallAgent(config, agent_queue_manager)
 
         def stream_event_response() -> Generator:
-            while True:
-                item = queue.get()
-                if item is None:
-                    break
-                yield f"event: {item.get('event')}\ndata: {json.dumps(item, ensure_ascii=False)}\n\n"
-                queue.task_done()
+            """流式事件输出响应"""
+            for agent_queue_event in agent.run(
+                req.query.data, [], "用户介绍自己叫慕小课"
+            ):
+                data = {
+                    "id": str(agent_queue_event.id),
+                    "task_id": str(agent_queue_event.task_id),
+                    "event": agent_queue_event.event,
+                    "thought": agent_queue_event.thought,
+                    "observation": agent_queue_event.observation,
+                    "tool": agent_queue_event.tool,
+                    "tool_input": agent_queue_event.tool_input,
+                    "answer": agent_queue_event.answer,
+                    "latency": agent_queue_event.latency,
+                }
+                yield f"event: {agent_queue_event.event}\ndata: {json.dumps(data)}\n\n"
 
         return compact_generate_response(stream_event_response())
 
