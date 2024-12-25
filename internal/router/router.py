@@ -164,7 +164,7 @@ class Router:
         )
         bp.add_url_rule(
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/name",
-            methods=["PATCH"],
+            methods=["PUT"],
             view_func=self.document_handler.update_document_name,
         )
         bp.add_url_rule(
@@ -173,7 +173,7 @@ class Router:
         )
         bp.add_url_rule(
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/enabled",
-            methods=["PATCH"],
+            methods=["PUT"],
             view_func=self.document_handler.update_document_enabled,
         )
         bp.add_url_rule(
@@ -193,7 +193,7 @@ class Router:
         )
         bp.add_url_rule(
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>/enabled",
-            methods=["PATCH"],
+            methods=["PUT"],
             view_func=self.segment_handler.update_segment_enabled,
         )
         bp.add_url_rule(
@@ -203,7 +203,7 @@ class Router:
         )
         bp.add_url_rule(
             "/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/segments/<uuid:segment_id>",
-            methods=["PATCH"],
+            methods=["PUT"],
             view_func=self.segment_handler.update_segment,
         )
         bp.add_url_rule(
