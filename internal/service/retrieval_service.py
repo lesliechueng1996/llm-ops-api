@@ -78,17 +78,22 @@ class RetrievalService:
         with self.db.auto_commit():
             dataset_queries = []
             segment_ids = []
-            for lc_doc in lc_documents:
+            unique_dataset_ids = list(
+                set([lc_doc.metadata["dataset_id"] for lc_doc in lc_documents])
+            )
+            for dataset_id in unique_dataset_ids:
                 dataset_query = DatasetQuery(
-                    dataset_id=lc_doc.metadata["dataset_id"],
+                    dataset_id=dataset_id,
                     query=query,
                     source=retrival_source,
                     source_app_id=None,
                     created_by=account_id,
                 )
                 dataset_queries.append(dataset_query)
-                segment_ids.append(lc_doc.metadata["segment_id"])
             self.db.session.add_all(dataset_queries)
+
+            for lc_doc in lc_documents:
+                segment_ids.append(lc_doc.metadata["segment_id"])
 
             self.db.session.execute(
                 update(Segment)
