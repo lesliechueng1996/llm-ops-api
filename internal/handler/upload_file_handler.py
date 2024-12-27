@@ -6,7 +6,11 @@
 
 from injector import inject
 from dataclasses import dataclass
-from internal.schema import UploadFileSchemaReq, UploadImageSchemaReq
+from internal.schema import (
+    UploadFileSchemaReq,
+    UploadImageSchemaReq,
+    UploadFileSchemaRes,
+)
 from internal.service import UploadFileService
 from pkg.response import validate_error_json, success_message, success_json
 
@@ -20,8 +24,9 @@ class UploadFileHandler:
         req = UploadFileSchemaReq()
         if not req.validate():
             return validate_error_json(req.errors)
-        self.upload_file_service.upload_file(req.file.data)
-        return success_message("上传文件成功")
+        upload_file = self.upload_file_service.upload_file(req.file.data)
+        schema = UploadFileSchemaRes()
+        return success_json(schema.dump(upload_file))
 
     def upload_image(self):
         req = UploadImageSchemaReq()

@@ -26,6 +26,8 @@ class UploadFileService:
             upload_file = UploadFile(account_id=account_id, **result)
             self.db.session.add(upload_file)
 
+        return upload_file
+
     def upload_image(self, file: FileStorage):
         result = self.cosService.upload_file(file, only_image=True)
         return self.cosService.get_file_url(result["key"])

@@ -44,7 +44,7 @@ class CreateDocumentsSchemaReq(FlaskForm):
         field.data = list(dict.fromkeys(field.data))
 
     def validate_rule(self, field: DictField):
-        if self.process_type == ProcessType.AUTOMATIC:
+        if self.process_type.data == ProcessType.AUTOMATIC:
             field.data = DEFAULT_PROCESS_RULE["rule"]
         else:
             if not isinstance(field.data, dict) or len(field.data) == 0:
