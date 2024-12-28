@@ -5,13 +5,18 @@
 """
 
 import base64
+from datetime import datetime, timedelta
 import secrets
 from uuid import UUID
+from flask import request
 from injector import inject
 from dataclasses import dataclass
 from internal.model import Account, AccountOAuth
+from internal.service.jwt_service import JWTService
 from pkg.sqlalchemy import SQLAlchemy
-from pkg.password import hash_password
+from pkg.password import hash_password, compare_password
+from internal.exception import UnauthorizedException
+import logging
 
 
 @inject
@@ -19,6 +24,7 @@ from pkg.password import hash_password
 class AccountService:
 
     db: SQLAlchemy
+    jwt_service: JWTService
 
     def get_account(self, account_id: UUID) -> Account:
         account = self.db.session.query(Account).filter_by(id=account_id).one_or_none()
@@ -59,3 +65,34 @@ class AccountService:
     def update_avatar(self, account: Account, avatar: str):
         with self.db.auto_commit():
             account.avatar = avatar
+
+    def password_login(self, email: str, password: str):
+        account = self.get_account_by_email(email)
+        if account is None:
+            logging.warning(f"account not found, email: {email}")
+            raise UnauthorizedException("账号或密码错误")
+
+        if (
+            not account.password
+            or not account.password_salt
+            or not compare_password(password, account.password, account.password_salt)
+        ):
+            logging.warning(f"password not match, email: {email}")
+            raise UnauthorizedException("账号或密码错误")
+
+        expire_at = int((datetime.now() + timedelta(days=30)).timestamp())
+        payload = {
+            "sub": str(account.id),
+            "iss": "llmops",
+            "exp": expire_at,
+        }
+        access_token = self.jwt_service.encode(payload)
+
+        with self.db.auto_commit():
+            account.last_login_ip = request.remote_addr
+            account.last_login_at = datetime.now()
+
+        return {
+            "access_token": access_token,
+            "expire_at": expire_at,
+        }
