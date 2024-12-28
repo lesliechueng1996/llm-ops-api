@@ -85,3 +85,40 @@ class Account(db.Model, UserMixin):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP(0)"),
     )
+
+
+class AccountOAuth(db.Model):
+    __tablename__ = "account_oauth"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_account_oauth_id"),
+        Index("idx_account_oauth_account_id", "account_id"),
+        Index("idx_account_oauth_provider", "provider"),
+    )
+
+    id = Column(
+        UUID, default=uuid4, nullable=False, server_default=text("uuid_generate_v4()")
+    )
+    account_id = Column(UUID, nullable=False)
+    provider = Column(
+        String(255), nullable=False, server_default=text("''::character varying")
+    )
+    openid = Column(
+        String(255), nullable=False, server_default=text("''::character varying")
+    )
+    encrypted_token = Column(
+        String(255), nullable=False, server_default=text("''::character varying")
+    )
+    updated_at = Column(
+        DateTime,
+        default=datetime.now,
+        onupdate=datetime.now,
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP(0)"),
+        server_onupdate=text("CURRENT_TIMESTAMP(0)"),
+    )
+    created_at = Column(
+        DateTime,
+        default=datetime.now,
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP(0)"),
+    )

@@ -26,7 +26,7 @@ class GithubOAuth(OAuth):
         }
         return f"{self._AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
 
-    def get_access_token(self, code):
+    def get_access_token(self, code) -> str:
         data = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -42,6 +42,7 @@ class GithubOAuth(OAuth):
         access_token = resp_json.get("access_token")
         if not access_token:
             raise ValueError("Failed to get access token")
+        return access_token
 
     def get_raw_user_info(self, token):
         headers = {

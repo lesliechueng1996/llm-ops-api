@@ -46,6 +46,7 @@ from .segment_schema import (
     CreateSegmentSchemaReq,
     UpdateSegmentSchemaReq,
 )
+from .oauth_schema import OAuthAuthorizeRequestSchema, OAuthAuthorizeResponseSchema
 
 __all__ = [
     "CompletionReq",
@@ -81,4 +82,6 @@ __all__ = [
     "UpdateSegmentSchemaReq",
     "HitDatasetSchemaReq",
     "GetDatasetQueriesSchemaRes",
+    "OAuthAuthorizeRequestSchema",
+    "OAuthAuthorizeResponseSchema",
 ]

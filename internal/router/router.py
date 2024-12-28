@@ -219,4 +219,9 @@ class Router:
             "/oauth/<string:provider_name>",
             view_func=self.oauth_handler.get_redirect_url,
         )
+        bp.add_url_rule(
+            "/oauth/authorize/<string:provider_name>",
+            methods=["POST"],
+            view_func=self.oauth_handler.authorize,
+        )
         app.register_blueprint(bp)

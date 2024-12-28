@@ -9,6 +9,7 @@ from .api_tool import ApiTool, ApiToolProvider
 from .upload_file import UploadFile
 from .dataset import Dataset, Document, Segment, KeywordTable, DatasetQuery, ProcessRule
 from .conversation import Conversation, Message, MessageAgentThought
+from .account import Account, AccountOAuth
 
 __all__ = [
     "App",
@@ -25,4 +26,6 @@ __all__ = [
     "Conversation",
     "Message",
     "MessageAgentThought",
+    "Account",
+    "AccountOAuth",
 ]
