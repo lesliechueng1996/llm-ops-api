@@ -3,3 +3,7 @@
 @Author : Leslie
 @File   : __init__.py
 """
+
+from .github_oauth import GithubOAuth
+
+__all__ = ["GithubOAuth"]
