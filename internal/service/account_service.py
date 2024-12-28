@@ -4,11 +4,14 @@
 @File   : account_service.py
 """
 
+import base64
+import secrets
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
 from internal.model import Account, AccountOAuth
 from pkg.sqlalchemy import SQLAlchemy
+from pkg.password import hash_password
 
 
 @inject
@@ -38,3 +41,21 @@ class AccountService:
         self.db.session.add(account)
         self.db.session.commit()
         return account
+
+    def update_password(self, account: Account, password: str):
+        salt = secrets.token_bytes(16)
+        base64_salt = base64.b64encode(salt).decode("utf-8")
+        password_hashed = hash_password(password, salt)
+        base64_password_hashed = base64.b64encode(password_hashed).decode("utf-8")
+
+        with self.db.auto_commit():
+            account.password_salt = base64_salt
+            account.password = base64_password_hashed
+
+    def update_name(self, account: Account, name: str):
+        with self.db.auto_commit():
+            account.name = name
+
+    def update_avatar(self, account: Account, avatar: str):
+        with self.db.auto_commit():
+            account.avatar = avatar

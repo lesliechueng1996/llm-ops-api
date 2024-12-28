@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from injector import inject
 from internal.service import OAuthService
 from pkg.response import success_json, validate_error_json
-from internal.schema import OAuthAuthorizeRequestSchema
+from internal.schema import OAuthAuthorizeRequestSchema, OAuthAuthorizeResponseSchema
 
 
 @inject
@@ -27,4 +27,4 @@ class OAuthHandler:
 
         result = self.oauth_service.oauth_login(provider_name, req.code.data)
 
-        return success_json(result)
+        return success_json(OAuthAuthorizeResponseSchema().dump(result))

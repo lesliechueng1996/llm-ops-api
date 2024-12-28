@@ -25,7 +25,7 @@ class JWTService:
 
     @classmethod
     def decode(cls, token: str) -> dict[str, Any]:
-        secret_key = getenv("JWT_SECRET KEY")
+        secret_key = getenv("JWT_SECRET_KEY")
 
         try:
             return jwt.decode(token, secret_key, algorithms=["HS256"])

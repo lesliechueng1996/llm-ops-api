@@ -17,6 +17,7 @@ from internal.handler import (
     DocumentHandler,
     SegmentHandler,
     OAuthHandler,
+    AccountHandler,
 )
 
 
@@ -33,6 +34,7 @@ class Router:
     document_handler: DocumentHandler
     segment_handler: SegmentHandler
     oauth_handler: OAuthHandler
+    account_handler: AccountHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -223,5 +225,23 @@ class Router:
             "/oauth/authorize/<string:provider_name>",
             methods=["POST"],
             view_func=self.oauth_handler.authorize,
+        )
+
+        # Account
+        bp.add_url_rule("/account", view_func=self.account_handler.get_account)
+        bp.add_url_rule(
+            "/account/password",
+            methods=["PUT"],
+            view_func=self.account_handler.update_password,
+        )
+        bp.add_url_rule(
+            "/account/name",
+            methods=["PUT"],
+            view_func=self.account_handler.update_name,
+        )
+        bp.add_url_rule(
+            "/account/avatar",
+            methods=["PUT"],
+            view_func=self.account_handler.update_avatar,
         )
         app.register_blueprint(bp)
