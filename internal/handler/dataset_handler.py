@@ -20,6 +20,7 @@ from internal.service import DatasetService
 from pkg.pagination import PageModel
 from pkg.response import validate_error_json, success_message, success_json
 from flask import request
+from flask_login import login_required
 
 
 @inject
@@ -42,6 +43,7 @@ class DatasetHandler:
         self.dataset_service.update_dataset(dataset_id, req)
         return success_message("更新知识库成功")
 
+    @login_required
     def get_dataset(self, dataset_id: UUID):
         dataset = self.dataset_service.get_dataset(dataset_id)
         schema = GetDatasetSchemaRes()

@@ -16,6 +16,8 @@ from config import Config
 from pkg.response import json, Response, HttpCode
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_login import LoginManager
+from internal.middleware import Middleware
 
 
 class Http(Flask):
@@ -26,6 +28,8 @@ class Http(Flask):
         config: Config,
         db: SQLAlchemy,
         migrate: Migrate,
+        login_manager: LoginManager,
+        middleware: Middleware,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -39,6 +43,7 @@ class Http(Flask):
         redis_extension.init_app(self)
         celery_extension.init_app(self)
         logging_extension.init_app(self)
+        login_manager.init_app(self)
 
         CORS(
             self,
@@ -55,6 +60,8 @@ class Http(Flask):
                 }
             },
         )
+
+        login_manager.request_loader(middleware.request_loader)
         router.register_router(self)
 
     def _error_handler(self, error: Exception):

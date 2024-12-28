@@ -3,3 +3,7 @@
 @Author : Leslie
 @File   : __init__.py
 """
+
+from .middleware import Middleware
+
+__all__ = ["Middleware"]

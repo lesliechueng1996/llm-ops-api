@@ -4,7 +4,9 @@
 @File   : app.py
 """
 
+from flask_login import LoginManager
 from flask_migrate import Migrate
+from internal.middleware import Middleware
 from pkg.sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from config import Config
@@ -21,6 +23,8 @@ app = Http(
     config=Config(),
     db=injector.get(SQLAlchemy),
     migrate=injector.get(Migrate),
+    login_manager=injector.get(LoginManager),
+    middleware=injector.get(Middleware),
 )
 
 celery = app.extensions["celery"]
