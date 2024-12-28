@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 from injector import inject
 from dataclasses import dataclass
 from redis import Redis
+from internal.model.account import Account
 from pkg.sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from internal.task.document_task import (
@@ -43,12 +44,13 @@ class DocumentService:
 
     def create_documents(
         self,
+        account: Account,
         dataset_id: str,
         upload_file_ids: list[str],
         process_type: str = ProcessType.AUTOMATIC,
         rule: dict = {},
     ) -> tuple[list[Document], str]:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
         # 校验数据集是否存在
         dataset = (
             self.db.session.query(Dataset)
@@ -123,8 +125,10 @@ class DocumentService:
         )
         return last_document.position if last_document else 0
 
-    def get_documents_batch_status(self, dataset_id: UUID, batch: str) -> list[dict]:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_documents_batch_status(
+        self, dataset_id: UUID, batch: str, account: Account
+    ) -> list[dict]:
+        account_id = str(account.id)
 
         docs = (
             self.db.session.query(Document)
@@ -190,8 +194,10 @@ class DocumentService:
             doc_status_list.append(doc_status)
         return doc_status_list
 
-    def get_document(self, dataset_id: UUID, document_id: UUID) -> dict:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_document(
+        self, dataset_id: UUID, document_id: UUID, account: Account
+    ) -> dict:
+        account_id = str(account.id)
 
         doc = (
             self.db.session.query(Document)
@@ -237,8 +243,10 @@ class DocumentService:
             "created_at": datetime_to_timestamp(doc.created_at),
         }
 
-    def update_document_name(self, dataset_id: UUID, document_id: UUID, name: str):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def update_document_name(
+        self, dataset_id: UUID, document_id: UUID, name: str, account: Account
+    ):
+        account_id = str(account.id)
 
         doc = (
             self.db.session.query(Document)
@@ -258,9 +266,9 @@ class DocumentService:
         return
 
     def get_documents_pagination(
-        self, dataset_id: UUID, req: GetDocumentsPaginationSchemaReq
+        self, dataset_id: UUID, req: GetDocumentsPaginationSchemaReq, account: Account
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
 
         filters = [Document.account_id == account_id, Document.dataset_id == dataset_id]
         if req.search_word.data:
@@ -301,9 +309,9 @@ class DocumentService:
         ], paginator
 
     def update_document_enabled(
-        self, dataset_id: UUID, document_id: UUID, enabled: bool
+        self, dataset_id: UUID, document_id: UUID, enabled: bool, account: Account
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
 
         doc = (
             self.db.session.query(Document)
@@ -344,8 +352,8 @@ class DocumentService:
         update_document_enabled.delay(document_id, lock_key, lock_value, enabled)
         return
 
-    def delete_document(self, dataset_id: UUID, document_id: UUID):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def delete_document(self, dataset_id: UUID, document_id: UUID, account: Account):
+        account_id = str(account.id)
 
         doc = (
             self.db.session.query(Document)

@@ -9,6 +9,7 @@ from injector import inject
 from dataclasses import dataclass
 from internal.exception import ValidateErrorException, NotFoundException
 from internal.core.tools.api_tools.entities import OpenAPISchema, ToolEntity
+from internal.model.account import Account
 from internal.schema import (
     CreateAPIToolsSchemaReq,
     GetToolsPaginationSchemaReq,
@@ -37,8 +38,8 @@ class ApiToolService:
 
         return OpenAPISchema(**openapi_schema)
 
-    def create_api_tools(self, data: CreateAPIToolsSchemaReq):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def create_api_tools(self, data: CreateAPIToolsSchemaReq, account: Account):
+        account_id = str(account.id)
 
         openapi_schema = self.validate_openapi_schema(data.openapi_schema.data)
 
@@ -85,8 +86,10 @@ class ApiToolService:
             self.db.session.add_all(tools)
         pass
 
-    def get_api_tools_provider(self, provider_id: str) -> ApiToolProvider:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_api_tools_provider(
+        self, provider_id: str, account: Account
+    ) -> ApiToolProvider:
+        account_id = str(account.id)
 
         provider = (
             self.db.session.query(ApiToolProvider)
@@ -102,8 +105,10 @@ class ApiToolService:
 
         return provider
 
-    def get_api_tool(self, provider_id: str, tool_name: str) -> ApiTool:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_api_tool(
+        self, provider_id: str, tool_name: str, account: Account
+    ) -> ApiTool:
+        account_id = str(account.id)
 
         tool = (
             self.db.session.query(ApiTool)
@@ -120,8 +125,8 @@ class ApiToolService:
 
         return tool
 
-    def delete_api_tool_provider(self, provider_id: str):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def delete_api_tool_provider(self, provider_id: str, account: Account):
+        account_id = str(account.id)
 
         with self.db.auto_commit():
             self.db.session.query(ApiToolProvider).filter_by(
@@ -132,8 +137,10 @@ class ApiToolService:
             ).delete()
         return
 
-    def get_api_tools_pagination(self, req: GetToolsPaginationSchemaReq):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_api_tools_pagination(
+        self, req: GetToolsPaginationSchemaReq, account: Account
+    ):
+        account_id = str(account.id)
 
         filters = [ApiToolProvider.account_id == account_id]
         if req.search_word.data:
@@ -149,8 +156,10 @@ class ApiToolService:
 
         return providers, paginator
 
-    def update_api_tools_provider(self, req: UpdateAPIToolsSchemaReq, provider_id: str):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def update_api_tools_provider(
+        self, req: UpdateAPIToolsSchemaReq, provider_id: str, account: Account
+    ):
+        account_id = str(account.id)
 
         openapi_schema = self.validate_openapi_schema(req.openapi_schema.data)
         provider = self.get_api_tools_provider(provider_id)

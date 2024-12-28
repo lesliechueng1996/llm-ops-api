@@ -8,6 +8,7 @@ from injector import inject
 from dataclasses import dataclass
 from werkzeug.datastructures import FileStorage
 from internal.model import UploadFile
+from internal.model.account import Account
 from internal.service.cos_service import CosService
 from pkg.sqlalchemy import SQLAlchemy
 
@@ -18,8 +19,8 @@ class UploadFileService:
     cosService: CosService
     db: SQLAlchemy
 
-    def upload_file(self, file: FileStorage):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def upload_file(self, file: FileStorage, account: Account):
+        account_id = str(account.id)
 
         result = self.cosService.upload_file(file)
         with self.db.auto_commit():

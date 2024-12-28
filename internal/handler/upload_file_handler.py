@@ -12,7 +12,8 @@ from internal.schema import (
     UploadFileSchemaRes,
 )
 from internal.service import UploadFileService
-from pkg.response import validate_error_json, success_message, success_json
+from pkg.response import validate_error_json, success_json
+from flask_login import login_required, current_user
 
 
 @inject
@@ -20,14 +21,16 @@ from pkg.response import validate_error_json, success_message, success_json
 class UploadFileHandler:
     upload_file_service: UploadFileService
 
+    @login_required
     def upload_file(self):
         req = UploadFileSchemaReq()
         if not req.validate():
             return validate_error_json(req.errors)
-        upload_file = self.upload_file_service.upload_file(req.file.data)
+        upload_file = self.upload_file_service.upload_file(req.file.data, current_user)
         schema = UploadFileSchemaRes()
         return success_json(schema.dump(upload_file))
 
+    @login_required
     def upload_image(self):
         req = UploadImageSchemaReq()
         if not req.validate():

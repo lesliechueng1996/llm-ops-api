@@ -9,7 +9,7 @@ from threading import Thread
 from typing import Any, Generator, Literal
 from flask import request
 import os
-
+from flask_login import login_required, current_user
 from redis import Redis
 from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.entity.conversation_entity import InvokeFrom
@@ -92,6 +92,7 @@ class AppHandler:
         if memory is not None and isinstance(memory, BaseMemory):
             memory.save_context(run_obj.inputs, run_obj.outputs)
 
+    @login_required
     def debug(self, app_id: UUID):
         req = CompletionReq()
         if not req.validate():
@@ -203,18 +204,22 @@ class AppHandler:
 
         return success_json({"content": content})
 
+    @login_required
     def create_app(self):
         app = self.app_service.create_app()
         return success_message(f"创建应用成功, 应用ID: {app.id}")
 
+    @login_required
     def get_app(self, id: UUID):
         app = self.app_service.get_app(id)
         return success_message(f"获取应用成功, 应用名称: {app.name}")
 
+    @login_required
     def update_app(self, id: UUID):
         app = self.app_service.update_app(id)
         return success_message(f"更新应用成功, 应用名称: {app.name}")
 
+    @login_required
     def delete_app(self, id: UUID):
         app = self.app_service.delete_app(id)
         return success_message(f"删除应用成功, 应用ID: {app.id}")

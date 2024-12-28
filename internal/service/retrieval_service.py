@@ -26,6 +26,7 @@ class RetrievalService:
 
     def search_in_databases(
         self,
+        account_id: str,
         dataset_ids: list[UUID],
         query: str,
         retrieval_strategy: str = RetrievalStrategy.SEMANTIC,
@@ -33,7 +34,6 @@ class RetrievalService:
         score: float = 0,
         retrival_source: str = RetrievalSource.HIT_TESTING,
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
         avaliable_dataset_ids = [
             id
             for id, in self.db.session.query(Dataset)

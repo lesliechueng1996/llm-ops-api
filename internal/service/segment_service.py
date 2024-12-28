@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from internal.lib.helper import generate_text_hash
 from redis import Redis
 from internal.entity import LOCK_SEGMENT_UPDATE_ENABLED
+from internal.model.account import Account
 from pkg.sqlalchemy import SQLAlchemy
 from internal.schema import (
     GetSegmentsPaginationSchemaReq,
@@ -43,9 +44,13 @@ class SegmentService:
     embedding_service: EmbeddingService
 
     def get_segments_pagination(
-        self, dataset_id: str, document_id: str, req: GetSegmentsPaginationSchemaReq
+        self,
+        dataset_id: str,
+        document_id: str,
+        req: GetSegmentsPaginationSchemaReq,
+        account: Account,
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
         paginator = Paginator(self.db, req)
 
         filter = [
@@ -65,8 +70,10 @@ class SegmentService:
 
         return segments, paginator
 
-    def get_segment(self, dataset_id: str, document_id: str, segment_id: str):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_segment(
+        self, dataset_id: str, document_id: str, segment_id: str, account: Account
+    ):
+        account_id = str(account.id)
         segment = (
             self.db.session.query(Segment)
             .filter(
@@ -84,9 +91,14 @@ class SegmentService:
         return segment
 
     def update_segment_enabled(
-        self, dataset_id: str, document_id: str, segment_id: str, enabled: bool
+        self,
+        dataset_id: str,
+        document_id: str,
+        segment_id: str,
+        enabled: bool,
+        account: Account,
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
         segment = (
             self.db.session.query(Segment)
             .filter(
@@ -157,9 +169,13 @@ class SegmentService:
             release_lock(self.redis_client, lock_key, lock_value)
 
     def create_segment(
-        self, dataset_id: str, document_id: str, req: CreateSegmentSchemaReq
+        self,
+        dataset_id: str,
+        document_id: str,
+        req: CreateSegmentSchemaReq,
+        account: Account,
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
 
         token = self.embedding_service.calculate_token_count(req.content.data)
         if token > 1000:
@@ -267,8 +283,9 @@ class SegmentService:
         document_id: str,
         segment_id: str,
         req: UpdateSegmentSchemaReq,
+        account: Account,
     ):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+        account_id = str(account.id)
 
         token = self.embedding_service.calculate_token_count(req.content.data)
         if token > 1000:
@@ -356,8 +373,10 @@ class SegmentService:
                     segment.stopped_at = datetime.now()
             raise FailException("更新文档片段记录失败，请稍后尝试")
 
-    def delete_segment(self, dataset_id: str, document_id: str, segment_id: str):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def delete_segment(
+        self, dataset_id: str, document_id: str, segment_id: str, account: Account
+    ):
+        account_id = str(account.id)
         segment = (
             self.db.session.query(Segment)
             .filter(

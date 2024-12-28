@@ -8,6 +8,7 @@ import logging
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
+from internal.model.account import Account
 from internal.schema import (
     CreateDatasetSchemaReq,
     UpdateDatasetSchemaReq,
@@ -38,8 +39,8 @@ class DatasetService:
     db: SQLAlchemy
     retrieval_service: RetrievalService
 
-    def create_dataset(self, req: CreateDatasetSchemaReq):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def create_dataset(self, req: CreateDatasetSchemaReq, account: Account):
+        account_id = str(account.id)
 
         same_name_record = (
             self.db.session.query(Dataset)
@@ -64,8 +65,10 @@ class DatasetService:
             )
             self.db.session.add(dataset)
 
-    def update_dataset(self, dataset_id: str, req: UpdateDatasetSchemaReq):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def update_dataset(
+        self, dataset_id: str, req: UpdateDatasetSchemaReq, account: Account
+    ):
+        account_id = str(account.id)
 
         dataset = self.db.session.query(Dataset).get(dataset_id)
         if not dataset:
@@ -95,8 +98,8 @@ class DatasetService:
             dataset.description = description
             dataset.icon = req.icon.data
 
-    def get_dataset(self, dataset_id: str) -> dict:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_dataset(self, dataset_id: str, account: Account) -> dict:
+        account_id = str(account.id)
 
         dataset = self.db.session.query(Dataset).get(dataset_id)
         if not dataset or str(dataset.account_id) != account_id:
@@ -135,8 +138,10 @@ class DatasetService:
             "created_at": dataset.created_at,
         }
 
-    def get_datasets_pagination(self, req: GetDatasetsPaginationSchemaReq) -> list:
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_datasets_pagination(
+        self, req: GetDatasetsPaginationSchemaReq, account: Account
+    ) -> list:
+        account_id = str(account.id)
 
         filters = [Dataset.account_id == account_id]
         if req.search_word.data:
@@ -186,8 +191,8 @@ class DatasetService:
             for dataset in datasets
         ], paginator
 
-    def hit_dataset(self, dataset_id: UUID, req: HitDatasetSchemaReq):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def hit_dataset(self, dataset_id: UUID, req: HitDatasetSchemaReq, account: Account):
+        account_id = str(account.id)
 
         dataset = (
             self.db.session.query(Dataset)
@@ -198,6 +203,7 @@ class DatasetService:
             raise NotFoundException("知识库不存在")
 
         lc_docs = self.retrieval_service.search_in_databases(
+            account_id=account_id,
             dataset_ids=[dataset_id],
             query=req.query.data,
             retrieval_strategy=req.retrieval_strategy.data,
@@ -263,8 +269,8 @@ class DatasetService:
 
         return results
 
-    def get_dataset_queries(self, dataset_id: UUID):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def get_dataset_queries(self, dataset_id: UUID, account: Account):
+        account_id = str(account.id)
 
         dataset = (
             self.db.session.query(Dataset)
@@ -282,8 +288,8 @@ class DatasetService:
             .all()
         )
 
-    def delete_dataset(self, dataset_id: UUID):
-        account_id = "46db30d1-3199-4e79-a0cd-abf12fa6858f"
+    def delete_dataset(self, dataset_id: UUID, account: Account):
+        account_id = str(account.id)
 
         dataset = (
             self.db.session.query(Dataset)
