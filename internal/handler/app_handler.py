@@ -14,6 +14,7 @@ from redis import Redis
 from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.entity.conversation_entity import InvokeFrom
 from internal.schema import CompletionReq
+from internal.schema.app_schema import CreateAppReqSchema, GetAppResSchema
 from internal.service import (
     AppService,
     VectorStoreService,
@@ -206,13 +207,16 @@ class AppHandler:
 
     @login_required
     def create_app(self):
-        app = self.app_service.create_app()
-        return success_message(f"创建应用成功, 应用ID: {app.id}")
+        req = CreateAppReqSchema()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        app = self.app_service.create_app(req, current_user)
+        return success_json({"id": app.id})
 
     @login_required
-    def get_app(self, id: UUID):
-        app = self.app_service.get_app(id)
-        return success_message(f"获取应用成功, 应用名称: {app.name}")
+    def get_app(self, app_id: UUID):
+        result = self.app_service.get_app(app_id, current_user)
+        return success_json(GetAppResSchema().dump(result))
 
     @login_required
     def update_app(self, id: UUID):
