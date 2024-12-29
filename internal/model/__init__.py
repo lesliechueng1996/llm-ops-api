@@ -4,7 +4,7 @@
 @File   : __init__.py
 """
 
-from .app import App, AppDatasetJoin
+from .app import App, AppDatasetJoin, AppConfig, AppConfigVersion
 from .api_tool import ApiTool, ApiToolProvider
 from .upload_file import UploadFile
 from .dataset import Dataset, Document, Segment, KeywordTable, DatasetQuery, ProcessRule
@@ -28,4 +28,6 @@ __all__ = [
     "MessageAgentThought",
     "Account",
     "AccountOAuth",
+    "AppConfig",
+    "AppConfigVersion",
 ]
