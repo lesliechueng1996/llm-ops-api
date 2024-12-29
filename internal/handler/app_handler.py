@@ -227,3 +227,14 @@ class AppHandler:
     def delete_app(self, id: UUID):
         app = self.app_service.delete_app(id)
         return success_message(f"删除应用成功, 应用ID: {app.id}")
+
+    @login_required
+    def get_draft_app_config(self, app_id: UUID):
+        config = self.app_service.get_draft_app_config(app_id, current_user)
+        return success_json(config)
+
+    @login_required
+    def update_draft_app_config(self, app_id: UUID):
+        draft_app_config = request.get_json(force=True, silent=True) or {}
+        self.app_service.update_draft_app_config(app_id, draft_app_config, current_user)
+        return success_message("更新草稿配置成功")
