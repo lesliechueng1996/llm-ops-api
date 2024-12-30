@@ -2,6 +2,7 @@ from datetime import datetime
 from hashlib import sha3_256
 from importlib import import_module
 from typing import Any
+from langchain_core.documents import Document
 
 
 def dynamic_import(module_name: str, symbol_name: str) -> Any:
@@ -31,3 +32,7 @@ def datetime_to_timestamp(dt: datetime) -> int:
     if dt is None:
         return 0
     return int(dt.timestamp())
+
+
+def combine_documents(documents: list[Document]):
+    return "\n\n".join([doc.page_content for doc in documents])

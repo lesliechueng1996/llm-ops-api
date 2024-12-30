@@ -203,7 +203,7 @@ class DatasetService:
             raise NotFoundException("知识库不存在")
 
         lc_docs = self.retrieval_service.search_in_databases(
-            account_id=account_id,
+            account_id=account.id,
             dataset_ids=[dataset_id],
             query=req.query.data,
             retrieval_strategy=req.retrieval_strategy.data,

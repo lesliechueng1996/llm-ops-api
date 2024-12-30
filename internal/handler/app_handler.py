@@ -13,6 +13,7 @@ from flask_login import login_required, current_user
 from redis import Redis
 from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.entity.conversation_entity import InvokeFrom
+from internal.lib.helper import combine_documents
 from internal.schema import CompletionReq
 from internal.schema.app_schema import (
     CreateAppReqSchema,
@@ -182,10 +183,7 @@ class AppHandler:
         # 构建解析器
         str_parser = StrOutputParser()
 
-        retriever = (
-            self.vector_store_service.get_retriever()
-            | self.vector_store_service.combine_documents
-        )
+        retriever = self.vector_store_service.get_retriever() | combine_documents
         # 构建链
         chain = (
             RunnablePassthrough.assign(

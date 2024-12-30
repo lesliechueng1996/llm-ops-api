@@ -22,6 +22,7 @@ from internal.core.agent.entities import (
     AGENT_SYSTEM_PROMPT_TEMPLATE,
     AgentQueueEvent,
     QueueEvent,
+    DATASET_RETRIEVAL_TOOL_NAME,
 )
 from langgraph.graph import START, END, StateGraph
 from internal.exception import FailException
@@ -156,6 +157,7 @@ class FunctionCallAgent(BaseAgent):
                     id=id,
                     task_id=self.agent_queue_manager.task_id,
                     event=QueueEvent.AGENT_THOUGHT,
+                    thought=json.dumps(gathered.tool_calls),
                     messages=messages_to_dict(state["messages"]),
                     latency=time.perf_counter() - start_at,
                 )
@@ -189,7 +191,7 @@ class FunctionCallAgent(BaseAgent):
 
             event = (
                 QueueEvent.AGENT_ACTION
-                if tool_call["name"] != "dataset_retrieval"
+                if tool_call["name"] != DATASET_RETRIEVAL_TOOL_NAME
                 else QueueEvent.DATASET_RETRIEVAL
             )
 

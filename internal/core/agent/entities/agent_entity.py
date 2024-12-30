@@ -49,3 +49,6 @@ class AgentConfig(BaseModel):
 class AgentState(MessagesState):
     history: list[AnyMessage]
     long_term_memory: str
+
+
+DATASET_RETRIEVAL_TOOL_NAME = "dataset_retrieval"

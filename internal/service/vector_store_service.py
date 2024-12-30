@@ -27,10 +27,6 @@ class VectorStoreService:
     def get_retriever(self):
         return self.vector_store.as_retriever()
 
-    @classmethod
-    def combine_documents(cls, documents: list[Document]):
-        return "\n\n".join([doc.page_content for doc in documents])
-
     @property
     def collection(self):
         return self.client.collections.get(COLLECTION_NAME)
