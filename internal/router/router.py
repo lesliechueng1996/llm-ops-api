@@ -75,6 +75,11 @@ class Router:
             methods=["POST"],
             view_func=self.app_handler.cancel_publish,
         )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/fallback-history",
+            methods=["POST"],
+            view_func=self.app_handler.fallback_history,
+        )
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
         # )

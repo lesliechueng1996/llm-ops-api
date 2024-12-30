@@ -146,6 +146,58 @@ class AppService:
 
         return app
 
+    def fallback_history(
+        self, app_id: UUID, app_config_version_id: str, account: Account
+    ):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        app_config_version = (
+            self.db.session.query(AppConfigVersion)
+            .filter(
+                AppConfigVersion.id == app_config_version_id,
+                AppConfigVersion.app_id == app_id,
+                AppConfigVersion.config_type == AppConfigType.PUBLISHED,
+            )
+            .one_or_none()
+        )
+
+        if not app_config_version:
+            raise NotFoundException("应用配置不存在")
+
+        draft_app_config_dict = app_config_version.__dict__.copy()
+        remove_fields = [
+            "id",
+            "app_id",
+            "version",
+            "config_type",
+            "created_at",
+            "updated_at",
+            "_sa_instance_state",
+        ]
+        for field in remove_fields:
+            draft_app_config_dict.pop(field)
+
+        draft_app_config_dict = self._validate_draft_app_config(
+            draft_app_config_dict, account
+        )
+
+        current_draft_app_config = (
+            self.db.session.query(AppConfigVersion)
+            .filter(AppConfigVersion.id == app.draft_app_config_id)
+            .one_or_none()
+        )
+
+        with self.db.auto_commit():
+            for key, value in draft_app_config_dict.items():
+                setattr(current_draft_app_config, key, value)
+
     def get_draft_app_config(self, app_id: UUID, account: Account):
         app = (
             self.db.session.query(App)

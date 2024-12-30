@@ -16,6 +16,7 @@ from internal.entity.conversation_entity import InvokeFrom
 from internal.schema import CompletionReq
 from internal.schema.app_schema import (
     CreateAppReqSchema,
+    FallbackHistoryReqSchema,
     GetAppConfigPublishHistoriesResSchema,
     GetAppResSchema,
 )
@@ -264,3 +265,13 @@ class AppHandler:
     def cancel_publish(self, app_id: UUID):
         self.app_service.cancel_publish(app_id, current_user)
         return success_message("取消发布应用配置成功")
+
+    @login_required
+    def fallback_history(self, app_id: UUID):
+        req = FallbackHistoryReqSchema()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        self.app_service.fallback_history(
+            app_id, req.app_config_version_id.data, current_user
+        )
+        return success_message("回退历史配置至草稿成功")

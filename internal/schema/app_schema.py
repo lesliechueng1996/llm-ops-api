@@ -84,3 +84,12 @@ class GetAppConfigPublishHistoriesResSchema(Schema):
             "version": data.version,
             "created_at": datetime_to_timestamp(data.created_at),
         }
+
+
+class FallbackHistoryReqSchema(FlaskForm):
+    app_config_version_id = StringField(
+        "app_config_version_id",
+        validators=[
+            DataRequired(message="请输入版本ID"),
+        ],
+    )
