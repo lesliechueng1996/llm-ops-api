@@ -61,6 +61,11 @@ class Router:
             methods=["PUT"],
             view_func=self.app_handler.update_draft_app_config,
         )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/publish",
+            methods=["POST"],
+            view_func=self.app_handler.publish_app_config,
+        )
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
         # )

@@ -238,3 +238,8 @@ class AppHandler:
         draft_app_config = request.get_json(force=True, silent=True) or {}
         self.app_service.update_draft_app_config(app_id, draft_app_config, current_user)
         return success_message("更新草稿配置成功")
+
+    @login_required
+    def publish_app_config(self, app_id: UUID):
+        self.app_service.publish_app_config(app_id, current_user)
+        return success_message("发布/更新应用配置信息成功")

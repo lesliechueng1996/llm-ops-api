@@ -5,12 +5,12 @@
 """
 
 from typing import Any
-from internal.model import Account, ApiTool, ApiToolProvider, Dataset
+from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
 from internal.schema.app_schema import CreateAppReqSchema
 from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
 from injector import inject
-from internal.model.app import App, AppConfigVersion
+from internal.model.app import App, AppConfigVersion, AppDatasetJoin
 from uuid import uuid4, UUID
 from internal.entity.app_entity import AppStatus, AppConfigType, DEFAULT_APP_CONFIG
 from internal.exception import NotFoundException, ValidateErrorException
@@ -18,6 +18,7 @@ from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
 from flask import request
 import logging
 from internal.lib.helper import datetime_to_timestamp
+from sqlalchemy import func
 
 
 @inject
@@ -158,7 +159,7 @@ class AppService:
                             "id": provider_entity.name,
                             "name": provider_entity.name,
                             "label": provider_entity.label,
-                            "icon": f"{request.schema}://{request.host}/builtin-tools/{provider_entity.name}/icon",
+                            "icon": f"{request.scheme}://{request.host}/builtin-tools/{provider_entity.name}/icon",
                             "description": provider_entity.description,
                         },
                         "tool": {
@@ -229,7 +230,7 @@ class AppService:
             )
             .all()
         )
-        dataset_map = {dataset.id: dataset for dataset in dataset_records}
+        dataset_map = {str(dataset.id): dataset for dataset in dataset_records}
 
         if len(dataset_records) != len(app_config_version.datasets):
             logging.warning("应用配置中存在无效知识库")
@@ -274,7 +275,7 @@ class AppService:
     ) -> AppConfigVersion:
         app = (
             self.db.session.query(App)
-            .filter(App.id == id, App.account_id == account.id)
+            .filter(App.id == app_id, App.account_id == account.id)
             .one_or_none()
         )
 
@@ -294,6 +295,93 @@ class AppService:
                 setattr(app_config_version, key, value)
 
         return app_config_version
+
+    def publish_app_config(self, app_id: UUID, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+        if app is None:
+            raise NotFoundException("应用不存在")
+
+        draft_app_config_dict = self.get_draft_app_config(app_id, account)
+
+        with self.db.auto_commit():
+            app_config = AppConfig(
+                app_id=app.id,
+                model_config=draft_app_config_dict["model_config"],
+                dialog_round=draft_app_config_dict["dialog_round"],
+                preset_prompt=draft_app_config_dict["preset_prompt"],
+                tools=[
+                    {
+                        "type": tool["type"],
+                        "provider_id": tool["provider"]["id"],
+                        "tool_id": tool["tool"]["name"],
+                        "params": tool["tool"]["params"],
+                    }
+                    for tool in draft_app_config_dict["tools"]
+                ],
+                workflows=draft_app_config_dict["workflows"],
+                retrieval_config=draft_app_config_dict["retrieval_config"],
+                long_term_memory=draft_app_config_dict["long_term_memory"],
+                opening_statement=draft_app_config_dict["opening_statement"],
+                opening_questions=draft_app_config_dict["opening_questions"],
+                speech_to_text=draft_app_config_dict["speech_to_text"],
+                text_to_speech=draft_app_config_dict["text_to_speech"],
+                review_config=draft_app_config_dict["review_config"],
+            )
+            self.db.session.add(app_config)
+            self.db.session.flush()
+
+            app.app_config_id = app_config.id
+            app.status = AppStatus.PUBLISHED
+
+            self.db.session.query(AppDatasetJoin).filter(
+                AppDatasetJoin.app_id == app.id
+            ).delete()
+
+            for dataset in draft_app_config_dict["datasets"]:
+                self.db.session.add(
+                    AppDatasetJoin(app_id=app.id, dataset_id=dataset["id"])
+                )
+
+            draft_app_config = (
+                self.db.session.query(AppConfigVersion)
+                .filter(AppConfigVersion.id == app.draft_app_config_id)
+                .one_or_none()
+            )
+
+            draft_app_config_copy = draft_app_config.__dict__.copy()
+            remove_fields = [
+                "id",
+                "version",
+                "config_type",
+                "created_at",
+                "updated_at",
+                "_sa_instance_state",
+            ]
+            for field in remove_fields:
+                draft_app_config_copy.pop(field)
+
+            max_version = (
+                self.db.session.query(
+                    func.coalesce(func.max(AppConfigVersion.version), 0)
+                )
+                .filter(
+                    AppConfigVersion.app_id == app.id,
+                    AppConfigVersion.config_type == AppConfigType.PUBLISHED,
+                )
+                .scalar()
+            )
+
+            app_config_version = AppConfigVersion(
+                **draft_app_config_copy,
+                version=max_version + 1,
+                config_type=AppConfigType.PUBLISHED,
+            )
+            self.db.session.add(app_config_version)
+        return app
 
     def _validate_draft_app_config(
         self, draft_app_config: dict[str, Any], account: Account
@@ -425,7 +513,9 @@ class AppService:
                 )
                 .all()
             )
-            draft_app_config["datasets"] = [dataset.id for dataset in dataset_records]
+            draft_app_config["datasets"] = [
+                str(dataset.id) for dataset in dataset_records
+            ]
 
         # 校验 retrieval_config
         if "retrieval_config" in draft_app_config:
