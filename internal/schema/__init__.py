@@ -4,7 +4,7 @@
 @File   : __init__.py
 """
 
-from .app_schema import CompletionReq
+from .app_schema import DebugChatRequestSchema
 from .api_tool_schema import (
     ValidationOpenAPISchemaReq,
     CreateAPIToolsSchemaReq,
@@ -49,7 +49,7 @@ from .segment_schema import (
 from .oauth_schema import OAuthAuthorizeRequestSchema, OAuthAuthorizeResponseSchema
 
 __all__ = [
-    "CompletionReq",
+    "DebugChatRequestSchema",
     "ValidationOpenAPISchemaReq",
     "CreateAPIToolsSchemaReq",
     "GetAPIToolsProviderSchemaRes",

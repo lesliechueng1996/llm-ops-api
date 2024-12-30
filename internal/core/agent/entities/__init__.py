@@ -4,7 +4,12 @@
 @File   : __init__.py
 """
 
-from .agent_entity import AgentConfig, AgentState, AGENT_SYSTEM_PROMPT_TEMPLATE
+from .agent_entity import (
+    AgentConfig,
+    AgentState,
+    AGENT_SYSTEM_PROMPT_TEMPLATE,
+    DATASET_RETRIEVAL_TOOL_NAME,
+)
 from .queue_entity import QueueEvent, AgentQueueEvent
 
 __all__ = [
@@ -13,4 +18,5 @@ __all__ = [
     "QueueEvent",
     "AgentQueueEvent",
     "AGENT_SYSTEM_PROMPT_TEMPLATE",
+    "DATASET_RETRIEVAL_TOOL_NAME",
 ]

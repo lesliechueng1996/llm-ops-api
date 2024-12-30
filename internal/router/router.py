@@ -43,9 +43,9 @@ class Router:
         bp = Blueprint("llmops", __name__, url_prefix="")
         bp.add_url_rule("/ping", view_func=self.app_handler.ping)
         bp.add_url_rule(
-            "/apps/<uuid:app_id>/debug",
+            "/apps/<uuid:app_id>/conversations",
             methods=["POST"],
-            view_func=self.app_handler.debug,
+            view_func=self.app_handler.debug_chat,
         )
 
         bp.add_url_rule(

@@ -12,7 +12,7 @@ from internal.lib.helper import datetime_to_timestamp
 from internal.model.app import AppConfigVersion
 
 
-class CompletionReq(FlaskForm):
+class DebugChatRequestSchema(FlaskForm):
     query = StringField(
         "query",
         validators=[

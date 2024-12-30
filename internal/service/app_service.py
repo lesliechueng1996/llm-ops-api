@@ -4,7 +4,11 @@
 @File   : app_service.py
 """
 
+import json
+from os import getenv
 from typing import Any
+from redis import Redis
+from internal.core.tools.api_tools.entities.tool_entity import ToolEntity
 from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
 from internal.model.conversation import Conversation
 from internal.schema.app_schema import CreateAppReqSchema
@@ -12,16 +16,25 @@ from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
 from injector import inject
 from internal.model.app import App, AppConfigVersion, AppDatasetJoin
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 from internal.entity.app_entity import AppStatus, AppConfigType, DEFAULT_APP_CONFIG
 from internal.exception import NotFoundException, ValidateErrorException, FailException
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
+from internal.core.tools.api_tools.providers import ApiProviderManger
 from flask import request
 import logging
 from internal.lib.helper import datetime_to_timestamp
 from sqlalchemy import desc, func
 from pkg.pagination import PaginationReq, Paginator
 from internal.entity.conversation_entity import InvokeFrom
+from langchain_openai import ChatOpenAI
+from internal.core.memory import TokenBufferMemory
+from .retrieval_service import RetrievalService
+from flask import current_app
+from internal.entity import RetrievalSource
+from internal.core.agent.agents.function_call_agent import FunctionCallAgent
+from internal.core.agent.entities.agent_entity import AgentConfig
+from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 
 
 @inject
@@ -29,6 +42,118 @@ from internal.entity.conversation_entity import InvokeFrom
 class AppService:
     db: SQLAlchemy
     builtin_provider_manager: BuiltinProviderManager
+    api_provider_manager: ApiProviderManger
+    retrieval_service: RetrievalService
+    redis_client: Redis
+
+    def debug_chat(self, app_id: UUID, query: str, account: Account):
+        app = self._get_app(app_id, account)
+
+        draft_app_config = self.get_draft_app_config(app_id, account)
+
+        debug_conversation = self._get_debug_conversation_or_create(app, account)
+
+        llm = ChatOpenAI(
+            model=draft_app_config["model_config"]["model"],
+            **draft_app_config["model_config"]["parameters"],
+            api_key=getenv("OPENAI_KEY"),
+            base_url=getenv("OPENAI_API_URL"),
+        )
+
+        token_buffer_memory = TokenBufferMemory(
+            conversation=debug_conversation,
+            db=self.db,
+            model_instance=llm,
+        )
+        history = token_buffer_memory.get_history_prompt_messages(
+            max_message_limit=draft_app_config["dialog_round"],
+        )
+
+        tools = []
+        for tool in draft_app_config["tools"]:
+            if tool["type"] == "builtin_tool":
+                builtin_tool = self.builtin_provider_manager.get_tool(
+                    tool["provider"]["id"],
+                    tool["tool"]["name"],
+                )
+                if not builtin_tool:
+                    continue
+                tools.append(builtin_tool(**tool["tool"]["params"]))
+            if tool["type"] == "api_tool":
+                api_tool_record = (
+                    self.db.session.query(ApiTool)
+                    .filter(
+                        ApiTool.account_id == account.id,
+                        ApiTool.id == tool["tool"]["id"],
+                    )
+                    .one_or_none()
+                )
+                if not api_tool_record:
+                    continue
+                api_tool_provider_record = (
+                    self.db.session.query(ApiToolProvider)
+                    .filter(
+                        ApiToolProvider.id == api_tool_record.provider_id,
+                    )
+                    .one_or_none()
+                )
+                if not api_tool_provider_record:
+                    continue
+                api_tool = self.api_provider_manager.get_tool(
+                    ToolEntity(
+                        provider_id=str(api_tool_record.provider_id),
+                        name=api_tool_record.name,
+                        url=api_tool_record.url,
+                        method=api_tool_record.method,
+                        description=api_tool_record.description,
+                        headers=api_tool_provider_record.headers,
+                        parameters=api_tool_record.parameters,
+                    )
+                )
+                tools.append(api_tool)
+
+        if draft_app_config["datasets"]:
+            dataset_retrieval = (
+                self.retrieval_service.create_langchain_tool_from_search(
+                    flask_app=current_app._get_current_object(),
+                    account_id=account.id,
+                    dataset_ids=[
+                        dataset["id"] for dataset in draft_app_config["datasets"]
+                    ],
+                    retrival_source=RetrievalSource.APP,
+                    **draft_app_config["retrieval_config"],
+                )
+            )
+            tools.append(dataset_retrieval)
+
+        agent = FunctionCallAgent(
+            agent_config=AgentConfig(
+                llm=llm,
+                enable_long_term_memory=draft_app_config["long_term_memory"]["enable"],
+                tools=tools,
+            ),
+            agent_queue_manager=AgentQueueManager(
+                user_id=account.id,
+                task_id=uuid4(),
+                invoke_from=InvokeFrom.DEBUGGER,
+                redis_client=self.redis_client,
+            ),
+        )
+
+        for agent_queue_event in agent.run(query, history, debug_conversation.summary):
+            data = {
+                "id": str(agent_queue_event.id),
+                "task_id": str(agent_queue_event.task_id),
+                "event": agent_queue_event.event,
+                "thought": agent_queue_event.thought,
+                "observation": agent_queue_event.observation,
+                "tool": agent_queue_event.tool,
+                "tool_input": agent_queue_event.tool_input,
+                "answer": agent_queue_event.answer,
+                "latency": agent_queue_event.latency,
+            }
+
+            yield f"event: {agent_queue_event.event}\ndata: {json.dumps(data)}\n\n"
 
     def create_app(self, req: CreateAppReqSchema, account: Account) -> App:
         with self.db.auto_commit():
@@ -103,14 +228,7 @@ class AppService:
         return app
 
     def get_publish_histories(self, app_id: UUID, req: PaginationReq, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-
-        if not app:
-            raise NotFoundException("应用不存在")
+        self._get_app(app_id, account)
 
         paginator = Paginator(self.db, req)
 
@@ -126,14 +244,7 @@ class AppService:
         return data, paginator
 
     def cancel_publish(self, app_id: UUID, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         if app.status != AppStatus.PUBLISHED:
             raise FailException("应用未发布")
@@ -151,14 +262,7 @@ class AppService:
     def fallback_history(
         self, app_id: UUID, app_config_version_id: str, account: Account
     ):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         app_config_version = (
             self.db.session.query(AppConfigVersion)
@@ -201,13 +305,7 @@ class AppService:
                 setattr(current_draft_app_config, key, value)
 
     def get_app_debug_summary(self, app_id: UUID, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         current_draft_app_config = (
             self.db.session.query(AppConfigVersion)
@@ -248,13 +346,7 @@ class AppService:
         return conversation.summary
 
     def update_app_debug_summary(self, app_id: UUID, summary: str, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         current_draft_app_config = (
             self.db.session.query(AppConfigVersion)
@@ -297,13 +389,7 @@ class AppService:
             conversation.summary = summary
 
     def delete_app_debug_conversations(self, app_id: UUID, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         if not app.debug_conversation_id:
             return
@@ -312,14 +398,7 @@ class AppService:
             app.debug_conversation_id = None
 
     def get_draft_app_config(self, app_id: UUID, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-
-        if not app:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         draft_app_config_id = app.draft_app_config_id
         app_config_version = (
@@ -485,11 +564,7 @@ class AppService:
     def update_draft_app_config(
         self, app_id: UUID, draft_app_config: dict[str, Any], account: Account
     ) -> AppConfigVersion:
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
+        app = self._get_app(app_id, account)
 
         draft_app_config = self._validate_draft_app_config(draft_app_config, account)
 
@@ -509,13 +584,7 @@ class AppService:
         return app_config_version
 
     def publish_app_config(self, app_id: UUID, account: Account):
-        app = (
-            self.db.session.query(App)
-            .filter(App.id == app_id, App.account_id == account.id)
-            .one_or_none()
-        )
-        if app is None:
-            raise NotFoundException("应用不存在")
+        app = self._get_app(app_id, account)
 
         draft_app_config_dict = self.get_draft_app_config(app_id, account)
 
@@ -918,3 +987,38 @@ class AppService:
                     )
 
         return draft_app_config
+
+    def _get_app(self, app_id: UUID, account: Account) -> App:
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+        if not app:
+            raise NotFoundException("应用不存在")
+        return app
+
+    def _get_debug_conversation_or_create(
+        self, app: App, account: Account
+    ) -> Conversation:
+        debug_conversation = (
+            self.db.session.query(Conversation)
+            .filter(
+                Conversation.id == app.debug_conversation_id,
+                Conversation.app_id == app.id,
+            )
+            .one_or_none()
+        )
+        if not debug_conversation:
+            with self.db.auto_commit():
+                debug_conversation = Conversation(
+                    app_id=app.id,
+                    name="New Conversation",
+                    invoke_from=InvokeFrom.DEBUGGER,
+                    created_by=account.id,
+                )
+                self.db.session.add(debug_conversation)
+                self.db.session.flush()
+                app.debug_conversation_id = debug_conversation.id
+
+        return debug_conversation
