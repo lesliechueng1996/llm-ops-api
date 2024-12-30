@@ -9,6 +9,7 @@ from wtforms import StringField
 from wtforms.validators import DataRequired, Length, URL, Optional
 from marshmallow import Schema, fields, pre_dump
 from internal.lib.helper import datetime_to_timestamp
+from internal.model.app import AppConfigVersion
 
 
 class CompletionReq(FlaskForm):
@@ -68,4 +69,18 @@ class GetAppResSchema(Schema):
             "draft_updated_at": datetime_to_timestamp(data["draft_updated_at"]),
             "updated_at": datetime_to_timestamp(app.updated_at),
             "created_at": datetime_to_timestamp(app.created_at),
+        }
+
+
+class GetAppConfigPublishHistoriesResSchema(Schema):
+    id = fields.UUID()
+    version = fields.String()
+    created_at = fields.Integer()
+
+    @pre_dump
+    def process_data(self, data: AppConfigVersion, **kwargs):
+        return {
+            "id": data.id,
+            "version": data.version,
+            "created_at": datetime_to_timestamp(data.created_at),
         }

@@ -18,7 +18,8 @@ from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
 from flask import request
 import logging
 from internal.lib.helper import datetime_to_timestamp
-from sqlalchemy import func
+from sqlalchemy import desc, func
+from pkg.pagination import PaginationReq, Paginator
 
 
 @inject
@@ -98,6 +99,29 @@ class AppService:
             app = self.get_app(id)
             self.db.session.delete(app)
         return app
+
+    def get_publish_histories(self, app_id: UUID, req: PaginationReq, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        paginator = Paginator(self.db, req)
+
+        data = paginator.paginate(
+            self.db.session.query(AppConfigVersion)
+            .filter(
+                AppConfigVersion.app_id == app_id,
+                AppConfigVersion.config_type == AppConfigType.PUBLISHED,
+            )
+            .order_by(desc("version"))
+        )
+
+        return data, paginator
 
     def get_draft_app_config(self, app_id: UUID, account: Account):
         app = (

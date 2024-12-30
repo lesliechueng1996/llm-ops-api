@@ -14,7 +14,11 @@ from redis import Redis
 from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.entity.conversation_entity import InvokeFrom
 from internal.schema import CompletionReq
-from internal.schema.app_schema import CreateAppReqSchema, GetAppResSchema
+from internal.schema.app_schema import (
+    CreateAppReqSchema,
+    GetAppConfigPublishHistoriesResSchema,
+    GetAppResSchema,
+)
 from internal.service import (
     AppService,
     VectorStoreService,
@@ -45,6 +49,7 @@ from langchain_openai import ChatOpenAI
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
 from internal.core.agent.agents.function_call_agent import FunctionCallAgent
 from internal.core.agent.entities.agent_entity import AgentConfig
+from pkg.pagination import PaginationReq, PageModel
 
 
 @inject
@@ -243,3 +248,14 @@ class AppHandler:
     def publish_app_config(self, app_id: UUID):
         self.app_service.publish_app_config(app_id, current_user)
         return success_message("发布/更新应用配置信息成功")
+
+    @login_required
+    def get_publish_histories(self, app_id: UUID):
+        req = PaginationReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        histories, paginator = self.app_service.get_publish_histories(
+            app_id, req, current_user
+        )
+        schema = GetAppConfigPublishHistoriesResSchema(many=True)
+        return success_json(PageModel(schema.dump(histories), paginator))
