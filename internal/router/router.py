@@ -70,6 +70,11 @@ class Router:
             "/apps/<uuid:app_id>/publish-histories",
             view_func=self.app_handler.get_publish_histories,
         )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/cancel-publish",
+            methods=["POST"],
+            view_func=self.app_handler.cancel_publish,
+        )
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
         # )

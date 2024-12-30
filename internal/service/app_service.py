@@ -13,7 +13,7 @@ from injector import inject
 from internal.model.app import App, AppConfigVersion, AppDatasetJoin
 from uuid import uuid4, UUID
 from internal.entity.app_entity import AppStatus, AppConfigType, DEFAULT_APP_CONFIG
-from internal.exception import NotFoundException, ValidateErrorException
+from internal.exception import NotFoundException, ValidateErrorException, FailException
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
 from flask import request
 import logging
@@ -122,6 +122,29 @@ class AppService:
         )
 
         return data, paginator
+
+    def cancel_publish(self, app_id: UUID, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        if app.status != AppStatus.PUBLISHED:
+            raise FailException("应用未发布")
+
+        with self.db.auto_commit():
+            app.status = AppStatus.DRAFT
+            app.app_config_id = None
+
+            self.db.session.query(AppDatasetJoin).filter(
+                AppDatasetJoin.app_id == app.id
+            ).delete()
+
+        return app
 
     def get_draft_app_config(self, app_id: UUID, account: Account):
         app = (

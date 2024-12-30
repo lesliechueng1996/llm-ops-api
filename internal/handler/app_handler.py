@@ -259,3 +259,8 @@ class AppHandler:
         )
         schema = GetAppConfigPublishHistoriesResSchema(many=True)
         return success_json(PageModel(schema.dump(histories), paginator))
+
+    @login_required
+    def cancel_publish(self, app_id: UUID):
+        self.app_service.cancel_publish(app_id, current_user)
+        return success_message("取消发布应用配置成功")
