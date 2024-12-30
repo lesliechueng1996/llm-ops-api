@@ -6,6 +6,7 @@
 
 from typing import Any
 from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
+from internal.model.conversation import Conversation
 from internal.schema.app_schema import CreateAppReqSchema
 from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ import logging
 from internal.lib.helper import datetime_to_timestamp
 from sqlalchemy import desc, func
 from pkg.pagination import PaginationReq, Paginator
+from internal.entity.conversation_entity import InvokeFrom
 
 
 @inject
@@ -197,6 +199,117 @@ class AppService:
         with self.db.auto_commit():
             for key, value in draft_app_config_dict.items():
                 setattr(current_draft_app_config, key, value)
+
+    def get_app_debug_summary(self, app_id: UUID, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        current_draft_app_config = (
+            self.db.session.query(AppConfigVersion)
+            .filter(
+                AppConfigVersion.id == app.draft_app_config_id,
+                AppConfigVersion.config_type == AppConfigType.DRAFT,
+            )
+            .one_or_none()
+        )
+        if not current_draft_app_config:
+            raise NotFoundException("应用配置不存在")
+
+        if current_draft_app_config.long_term_memory["enable"] is False:
+            raise FailException("长期记忆未启用")
+
+        debug_conversation_id = app.debug_conversation_id
+        conversation = (
+            self.db.session.query(Conversation)
+            .filter(
+                Conversation.id == debug_conversation_id,
+                Conversation.app_id == app.id,
+            )
+            .one_or_none()
+        )
+        if conversation is None:
+            with self.db.auto_commit():
+                conversation = Conversation(
+                    app_id=app.id,
+                    name="New Conversation",
+                    invoke_from=InvokeFrom.DEBUGGER,
+                    created_by=account.id,
+                )
+                self.db.session.add(conversation)
+                self.db.session.flush()
+
+                app.debug_conversation_id = conversation.id
+
+        return conversation.summary
+
+    def update_app_debug_summary(self, app_id: UUID, summary: str, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        current_draft_app_config = (
+            self.db.session.query(AppConfigVersion)
+            .filter(
+                AppConfigVersion.id == app.draft_app_config_id,
+                AppConfigVersion.config_type == AppConfigType.DRAFT,
+            )
+            .one_or_none()
+        )
+        if not current_draft_app_config:
+            raise NotFoundException("应用配置不存在")
+
+        if current_draft_app_config.long_term_memory["enable"] is False:
+            raise FailException("长期记忆未启用")
+
+        debug_conversation_id = app.debug_conversation_id
+        conversation = (
+            self.db.session.query(Conversation)
+            .filter(
+                Conversation.id == debug_conversation_id,
+                Conversation.app_id == app.id,
+            )
+            .one_or_none()
+        )
+        if conversation is None:
+            with self.db.auto_commit():
+                conversation = Conversation(
+                    app_id=app.id,
+                    name="New Conversation",
+                    invoke_from=InvokeFrom.DEBUGGER,
+                    created_by=account.id,
+                    summary=summary,
+                )
+                self.db.session.add(conversation)
+                self.db.session.flush()
+
+                app.debug_conversation_id = conversation.id
+
+        with self.db.auto_commit():
+            conversation.summary = summary
+
+    def delete_app_debug_conversations(self, app_id: UUID, account: Account):
+        app = (
+            self.db.session.query(App)
+            .filter(App.id == app_id, App.account_id == account.id)
+            .one_or_none()
+        )
+        if not app:
+            raise NotFoundException("应用不存在")
+
+        if not app.debug_conversation_id:
+            return
+
+        with self.db.auto_commit():
+            app.debug_conversation_id = None
 
     def get_draft_app_config(self, app_id: UUID, account: Account):
         app = (

@@ -19,6 +19,7 @@ from internal.schema.app_schema import (
     FallbackHistoryReqSchema,
     GetAppConfigPublishHistoriesResSchema,
     GetAppResSchema,
+    UpdateAppDebugSummaryReqSchema,
 )
 from internal.service import (
     AppService,
@@ -275,3 +276,23 @@ class AppHandler:
             app_id, req.app_config_version_id.data, current_user
         )
         return success_message("回退历史配置至草稿成功")
+
+    @login_required
+    def get_app_debug_summary(self, app_id: UUID):
+        summary = self.app_service.get_app_debug_summary(app_id, current_user)
+        return success_json({"summary": summary})
+
+    @login_required
+    def update_app_debug_summary(self, app_id: UUID):
+        req = UpdateAppDebugSummaryReqSchema()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        self.app_service.update_app_debug_summary(
+            app_id, req.summary.data, current_user
+        )
+        return success_message("更新应用调试摘要成功")
+
+    @login_required
+    def delete_app_debug_conversations(self, app_id: UUID):
+        self.app_service.delete_app_debug_conversations(app_id, current_user)
+        return success_message("删除应用调试对话成功")

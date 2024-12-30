@@ -80,6 +80,20 @@ class Router:
             methods=["POST"],
             view_func=self.app_handler.fallback_history,
         )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/summary",
+            view_func=self.app_handler.get_app_debug_summary,
+        )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/summary",
+            methods=["PUT"],
+            view_func=self.app_handler.update_app_debug_summary,
+        )
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/conversations/debug",
+            methods=["DELETE"],
+            view_func=self.app_handler.delete_app_debug_conversations,
+        )
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
         # )

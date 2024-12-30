@@ -93,3 +93,7 @@ class FallbackHistoryReqSchema(FlaskForm):
             DataRequired(message="请输入版本ID"),
         ],
     )
+
+
+class UpdateAppDebugSummaryReqSchema(FlaskForm):
+    summary = StringField("summary")
