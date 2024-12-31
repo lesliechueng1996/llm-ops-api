@@ -47,6 +47,7 @@ from .segment_schema import (
     UpdateSegmentSchemaReq,
 )
 from .oauth_schema import OAuthAuthorizeRequestSchema, OAuthAuthorizeResponseSchema
+from .ai_schema import OptimizePromptReqSchema, SuggestedQuestionsReqSchema
 
 __all__ = [
     "DebugChatRequestSchema",
@@ -84,4 +85,6 @@ __all__ = [
     "GetDatasetQueriesSchemaRes",
     "OAuthAuthorizeRequestSchema",
     "OAuthAuthorizeResponseSchema",
+    "OptimizePromptReqSchema",
+    "SuggestedQuestionsReqSchema",
 ]

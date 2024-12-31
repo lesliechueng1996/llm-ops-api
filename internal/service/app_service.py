@@ -302,15 +302,16 @@ class AppService:
                             conversation.summary,
                         )
 
-                        new_conversation_name = conversation.name
-                        if conversation.is_new:
-                            new_conversation_name = (
-                                self.conversation_service.generate_conversation_name(
-                                    message.query
-                                )
-                            )
                         with self.db.auto_commit():
                             conversation.summary = new_summary
+
+                    if conversation.is_new:
+                        new_conversation_name = (
+                            self.conversation_service.generate_conversation_name(
+                                message.query
+                            )
+                        )
+                        with self.db.auto_commit():
                             conversation.name = new_conversation_name
 
                 if item["event"] in [QueueEvent.STOP, QueueEvent.ERROR]:

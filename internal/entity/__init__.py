@@ -27,6 +27,8 @@ from .conversation_entity import (
     ConversationInfo,
     MessageStatus,
     InvokeFrom,
+    SUGGESTED_QUESTIONS_TEMPLATE,
+    SuggestedQuestions,
 )
 
 __all__ = [
@@ -49,4 +51,6 @@ __all__ = [
     "ConversationInfo",
     "MessageStatus",
     "InvokeFrom",
+    "SUGGESTED_QUESTIONS_TEMPLATE",
+    "SuggestedQuestions",
 ]

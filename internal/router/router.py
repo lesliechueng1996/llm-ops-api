@@ -19,6 +19,7 @@ from internal.handler import (
     OAuthHandler,
     AccountHandler,
     AuthHandler,
+    AIHandler,
 )
 
 
@@ -37,6 +38,7 @@ class Router:
     oauth_handler: OAuthHandler
     account_handler: AccountHandler
     auth_handler: AuthHandler
+    ai_handler: AIHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -306,6 +308,18 @@ class Router:
             "/account/avatar",
             methods=["PUT"],
             view_func=self.account_handler.update_avatar,
+        )
+
+        # AI
+        bp.add_url_rule(
+            "/ai/optimize-prompt",
+            methods=["POST"],
+            view_func=self.ai_handler.optimize_prompt,
+        )
+        bp.add_url_rule(
+            "/ai/suggested-questions",
+            methods=["POST"],
+            view_func=self.ai_handler.suggested_questions,
         )
 
         app.register_blueprint(bp)

@@ -11,6 +11,8 @@ from internal.entity import (
     SUMMARIZER_TEMPLATE,
     CONVERSATION_NAME_TEMPLATE,
     ConversationInfo,
+    SUGGESTED_QUESTIONS_TEMPLATE,
+    SuggestedQuestions,
 )
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -81,3 +83,33 @@ class ConversationService:
             name = f"{name[:75]}..."
 
         return name
+
+    def generate_suggested_questions(self, histories: str) -> list[str]:
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", SUGGESTED_QUESTIONS_TEMPLATE), ("human", "{histories}")]
+        )
+
+        llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            api_key=getenv("OPENAI_KEY"),
+            base_url=getenv("OPENAI_API_URL"),
+            temperature=0,
+        ).with_structured_output(SuggestedQuestions)
+
+        chain = prompt | llm
+
+        suggestions = chain.invoke({"histories": histories})
+
+        questions = []
+
+        try:
+            if suggestions and hasattr(suggestions, "questions"):
+                questions = suggestions.questions
+        except Exception as e:
+            logging.exception(
+                f"提取建议问题列表出错, suggestions: {suggestions}, 错误信息: {str(e)}"
+            )
+        if len(questions) > 3:
+            questions = questions[:3]
+
+        return questions
