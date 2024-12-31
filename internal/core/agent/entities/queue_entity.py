@@ -22,7 +22,7 @@ class QueueEvent(str, Enum):
     PING = "ping"  # ping事件
 
 
-class AgentQueueEvent(BaseModel):
+class AgentThought(BaseModel):
     id: UUID
     task_id: UUID
 
@@ -46,3 +46,7 @@ class AgentQueueEvent(BaseModel):
     total_token_count: int = 0
     total_price: float = 0
     latency: float = 0
+
+
+class AgentResult(BaseModel):
+    pass

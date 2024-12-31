@@ -4,11 +4,14 @@
 @File   : agent_entity.py
 """
 
+from uuid import UUID
 from pydantic import BaseModel, Field
-from langchain_core.language_models import BaseLanguageModel
+from internal.entity.app_entity import DEFAULT_APP_CONFIG
 from langchain_core.tools import BaseTool
 from langgraph.graph import MessagesState
 from langchain_core.messages import AnyMessage
+
+from internal.entity.conversation_entity import InvokeFrom
 
 
 AGENT_SYSTEM_PROMPT_TEMPLATE = """你是一个高度定制的智能体应用，旨在为用户提供准确、专业的内容生成和问题解答，请严格遵守以下规则：
@@ -39,16 +42,25 @@ AGENT_SYSTEM_PROMPT_TEMPLATE = """你是一个高度定制的智能体应用，�
 
 
 class AgentConfig(BaseModel):
-    llm: BaseLanguageModel
+    user_id: UUID
+    invoke_from: InvokeFrom = InvokeFrom.WEB_APP
+    max_iteration_count: int = 5
     system_prompt: str = AGENT_SYSTEM_PROMPT_TEMPLATE
     preset_prompt: str = ""
     enable_long_term_memory: bool = False
     tools: list[BaseTool] = Field(default_factory=list)
+    review_config: dict = Field(
+        default_factory=lambda: DEFAULT_APP_CONFIG["review_config"]
+    )
 
 
 class AgentState(MessagesState):
+    task_id: UUID
+    iteration_count: int
     history: list[AnyMessage]
     long_term_memory: str
 
 
 DATASET_RETRIEVAL_TOOL_NAME = "dataset_retrieval"
+
+MAX_ITERATION_RESPONSE = "对不起，我已经尽力了，但是还是无法回答您的问题。"

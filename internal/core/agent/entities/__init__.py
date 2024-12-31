@@ -10,13 +10,13 @@ from .agent_entity import (
     AGENT_SYSTEM_PROMPT_TEMPLATE,
     DATASET_RETRIEVAL_TOOL_NAME,
 )
-from .queue_entity import QueueEvent, AgentQueueEvent
+from .queue_entity import QueueEvent, AgentThought
 
 __all__ = [
     "AgentConfig",
     "AgentState",
     "QueueEvent",
-    "AgentQueueEvent",
+    "AgentThought",
     "AGENT_SYSTEM_PROMPT_TEMPLATE",
     "DATASET_RETRIEVAL_TOOL_NAME",
 ]
