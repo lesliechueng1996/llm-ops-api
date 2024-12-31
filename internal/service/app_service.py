@@ -6,12 +6,15 @@
 
 import json
 from os import getenv
+import re
 from typing import Any
 from redis import Redis
+from internal.core.agent.entities.queue_entity import QueueEvent
 from internal.core.tools.api_tools.entities.tool_entity import ToolEntity
 from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
-from internal.model.conversation import Conversation
+from internal.model.conversation import Conversation, Message, MessageAgentThought
 from internal.schema.app_schema import CreateAppReqSchema
+from internal.service.conversation_service import ConversationService
 from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
 from injector import inject
@@ -26,7 +29,7 @@ import logging
 from internal.lib.helper import datetime_to_timestamp
 from sqlalchemy import desc, func
 from pkg.pagination import PaginationReq, Paginator
-from internal.entity.conversation_entity import InvokeFrom
+from internal.entity.conversation_entity import InvokeFrom, MessageStatus
 from langchain_openai import ChatOpenAI
 from internal.core.memory import TokenBufferMemory
 from .retrieval_service import RetrievalService
@@ -45,13 +48,52 @@ class AppService:
     api_provider_manager: ApiProviderManger
     retrieval_service: RetrievalService
     redis_client: Redis
+    conversation_service: ConversationService
 
     def debug_chat(self, app_id: UUID, query: str, account: Account):
         app = self._get_app(app_id, account)
+        task_id = uuid4()
 
         draft_app_config = self.get_draft_app_config(app_id, account)
 
         debug_conversation = self._get_debug_conversation_or_create(app, account)
+        review_config = draft_app_config["review_config"]
+
+        with self.db.auto_commit():
+            message = Message(
+                app_id=app_id,
+                conversation_id=debug_conversation.id,
+                invoke_from=InvokeFrom.DEBUGGER,
+                created_by=account.id,
+                query=query,
+                status=MessageStatus.NORMAL,
+            )
+            self.db.session.add(message)
+
+        if review_config["enable"] and review_config["inputs_config"]["enable"]:
+            contains_keywords = any(
+                keyword in query for keyword in review_config["keywords"]
+            )
+            if contains_keywords:
+                data = {
+                    "id": str(uuid4()),
+                    "conversation_id": str(debug_conversation.id),
+                    "message_id": str(message.id),
+                    "task_id": str(task_id),
+                    "event": QueueEvent.AGENT_MESSAGE,
+                    "thought": review_config["inputs_config"]["preset_response"],
+                    "observation": "",
+                    "tool": "",
+                    "tool_input": {},
+                    "answer": review_config["inputs_config"]["preset_response"],
+                    "latency": 0,
+                }
+                yield f"event: {QueueEvent.AGENT_MESSAGE}\ndata: {json.dumps(data)}\n\n"
+
+                with self.db.auto_commit():
+                    message.answer = data["answer"]
+
+                return
 
         llm = ChatOpenAI(
             model=draft_app_config["model_config"]["model"],
@@ -140,20 +182,119 @@ class AppService:
             ),
         )
 
+        agent_thought = {}
         for agent_queue_event in agent.run(query, history, debug_conversation.summary):
+            thought = agent_queue_event.thought
+            answer = agent_queue_event.answer
+            event_id = str(agent_queue_event.id)
+
+            if review_config["enable"] and review_config["outputs_config"]["enable"]:
+                for keyword in review_config["keywords"]:
+                    thought = re.sub(
+                        re.escape(keyword), "**", thought, flags=re.IGNORECASE
+                    )
+                    answer = re.sub(
+                        re.escape(keyword), "**", answer, flags=re.IGNORECASE
+                    )
+
+            if agent_queue_event.event != QueueEvent.PING:
+                if agent_queue_event.event == QueueEvent.AGENT_MESSAGE:
+                    if event_id not in agent_thought:
+                        agent_thought[event_id] = {
+                            "id": event_id,
+                            "task_id": str(agent_queue_event.task_id),
+                            "event": agent_queue_event.event,
+                            "thought": agent_queue_event.thought,
+                            "observation": agent_queue_event.observation,
+                            "tool": agent_queue_event.tool,
+                            "tool_input": agent_queue_event.tool_input,
+                            "message": agent_queue_event.message,
+                            "answer": agent_queue_event.answer,
+                            "latency": agent_queue_event.latency,
+                        }
+                    else:
+                        agent_thought[event_id] = {
+                            **agent_thought[event_id],
+                            "thought": f"{agent_thought[event_id]["thought"]}{agent_queue_event.thought}",
+                            "answer": f"{agent_thought[event_id]['answer']}{agent_queue_event.answer}",
+                            "latency": agent_queue_event.latency,
+                        }
+                else:
+                    agent_thought[event_id] = {
+                        "id": event_id,
+                        "task_id": str(agent_queue_event.task_id),
+                        "event": agent_queue_event.event,
+                        "thought": agent_queue_event.thought,
+                        "observation": agent_queue_event.observation,
+                        "tool": agent_queue_event.tool,
+                        "tool_input": agent_queue_event.tool_input,
+                        "message": agent_queue_event.message,
+                        "answer": agent_queue_event.answer,
+                        "latency": agent_queue_event.latency,
+                    }
+
             data = {
-                "id": str(agent_queue_event.id),
+                "id": event_id,
+                "conversation_id": str(debug_conversation.id),
+                "message_id": str(message.id),
                 "task_id": str(agent_queue_event.task_id),
                 "event": agent_queue_event.event,
-                "thought": agent_queue_event.thought,
+                "thought": thought,
                 "observation": agent_queue_event.observation,
                 "tool": agent_queue_event.tool,
                 "tool_input": agent_queue_event.tool_input,
-                "answer": agent_queue_event.answer,
+                "answer": answer,
                 "latency": agent_queue_event.latency,
             }
 
             yield f"event: {agent_queue_event.event}\ndata: {json.dumps(data)}\n\n"
+
+        position = 0
+        latency = 0
+        for key, item in agent_thought.items():
+            position += 1
+            latency += item["latency"]
+            
+            with self.db.auto_commit():
+                message_agent_thought = MessageAgentThought(
+                    app_id=app_id,
+                    conversation_id=debug_conversation.id,
+                    message_id=message.id,
+                    invoke_from=InvokeFrom.DEBUGGER,
+                    created_by=account.id,
+                    position=position,
+                    event=item["event"],
+                    thought=item["thought"],
+                    observation=item["observation"],
+                    tool=item["tool"],
+                    tool_input=item["tool_input"],
+                    message=item["message"],
+                    answer=item["answer"],
+                    latency=item["latency"],
+                )
+                self.db.session.add(message_agent_thought)
+            
+            if item["event"] == QueueEvent.AGENT_MESSAGE:
+                with self.db.auto_commit():
+                    message.message = item["message"]
+                    message.answer = item["answer"]
+                    message.latency = latency
+                
+                if draft_app_config["long_term_memory"]["enable"]:
+                    new_summary = self.conversation_service.summary(
+                        query,
+                        item["answer"],
+                        debug_conversation.summary,
+                    )
+
+                    new_conversation_name = debug_conversation.name
+                    if debug_conversation.is_new:
+                        new_conversation_name = self.conversation_service.generate_conversation_name(query)
+                    with self.db.auto_commit():
+                        debug_conversation.summary = new_summary
+                        debug_conversation.name = new_conversation_name
+                    
+                
 
     def create_app(self, req: CreateAppReqSchema, account: Account) -> App:
         with self.db.auto_commit():
