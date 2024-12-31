@@ -10,6 +10,7 @@ import re
 from threading import Thread
 from typing import Any
 from redis import Redis
+from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.core.agent.entities.queue_entity import QueueEvent
 from internal.core.tools.api_tools.entities.tool_entity import ToolEntity
 from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
@@ -1174,3 +1175,8 @@ class AppService:
                 app.debug_conversation_id = debug_conversation.id
 
         return debug_conversation
+
+    def stop_debug_task(self, app_id: UUID, task_id: UUID, account: Account):
+        self._get_app(app_id, account)
+
+        AgentQueueManager.set_stop_flag(task_id, InvokeFrom.DEBUGGER, account.id)

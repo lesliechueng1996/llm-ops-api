@@ -102,10 +102,12 @@ class AgentQueueManager:
     def stop_listen(self, task_id: UUID):
         self.queue(task_id).put(None)
 
-    def generate_task_belong_cache_key(self, task_id: UUID):
+    @classmethod
+    def generate_task_belong_cache_key(cls, task_id: UUID):
         return f"generate_task_belong:{str(task_id)}"
 
-    def generate_task_stopped_cache_key(self, task_id: UUID):
+    @classmethod
+    def generate_task_stopped_cache_key(cls, task_id: UUID):
         return f"generate_task_stopped:{str(task_id)}"
 
     def _is_stopped(self, task_id: UUID) -> bool:
@@ -137,3 +139,23 @@ class AgentQueueManager:
             self._queues[str(task_id)] = q
 
         return q
+
+    @classmethod
+    def set_stop_flag(cls, task_id: UUID, invoke_from: InvokeFrom, user_id: UUID):
+        from app.http.module import injector
+
+        redis_client = injector.get(Redis)
+
+        result = redis_client.get(cls.generate_task_belong_cache_key(task_id))
+        if not result:
+            return
+
+        useruser_prefix = (
+            "account"
+            if invoke_from in [InvokeFrom.WEB_APP, InvokeFrom.DEBUGGER]
+            else "end-user"
+        )
+        if result.decode("utf-8") != f"{useruser_prefix}-{str(user_id)}":
+            return
+
+        redis_client.setex(cls.generate_task_stopped_cache_key(task_id), 600, "1")

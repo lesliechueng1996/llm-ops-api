@@ -132,3 +132,8 @@ class AppHandler:
     def delete_app_debug_conversations(self, app_id: UUID):
         self.app_service.delete_app_debug_conversations(app_id, current_user)
         return success_message("删除应用调试对话成功")
+
+    @login_required
+    def stop_debug_task(self, app_id: UUID, task_id: UUID):
+        self.app_service.stop_debug_task(app_id, task_id, current_user)
+        return success_message("停止调试任务成功")
