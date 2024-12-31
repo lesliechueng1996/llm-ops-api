@@ -4,9 +4,9 @@
 @File   : app_service.py
 """
 
+from datetime import datetime
 import json
 from os import getenv
-import re
 from threading import Thread
 from typing import Any
 from redis import Redis
@@ -15,13 +15,16 @@ from internal.core.agent.entities.queue_entity import QueueEvent
 from internal.core.tools.api_tools.entities.tool_entity import ToolEntity
 from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
 from internal.model.conversation import Conversation, Message, MessageAgentThought
-from internal.schema.app_schema import CreateAppReqSchema
+from internal.schema.app_schema import (
+    CreateAppReqSchema,
+    GetConversationMessagesReqSchema,
+)
 from internal.service.conversation_service import ConversationService
 from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
 from injector import inject
 from internal.model.app import App, AppConfigVersion, AppDatasetJoin
-from uuid import UUID, uuid4
+from uuid import UUID
 from internal.entity.app_entity import AppStatus, AppConfigType, DEFAULT_APP_CONFIG
 from internal.exception import NotFoundException, ValidateErrorException, FailException
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
@@ -29,7 +32,7 @@ from internal.core.tools.api_tools.providers import ApiProviderManger
 from flask import Flask, request
 import logging
 from internal.lib.helper import datetime_to_timestamp
-from sqlalchemy import desc, func
+from sqlalchemy import asc, desc, func
 from pkg.pagination import PaginationReq, Paginator
 from internal.entity.conversation_entity import InvokeFrom, MessageStatus
 from langchain_openai import ChatOpenAI
@@ -1192,3 +1195,69 @@ class AppService:
         self._get_app(app_id, account)
 
         AgentQueueManager.set_stop_flag(task_id, InvokeFrom.DEBUGGER, account.id)
+
+    def get_conversation_messages_with_page(
+        self, app_id: UUID, req: GetConversationMessagesReqSchema, account: Account
+    ):
+        app = self._get_app(app_id, account)
+
+        filters = []
+        if req.created_at.data:
+            filters.append(
+                Message.created_at <= datetime.fromtimestamp(req.created_at.data)
+            )
+
+        paginator = Paginator(self.db, req)
+        messages = paginator.paginate(
+            self.db.session.query(Message)
+            .filter(
+                Message.conversation_id == app.debug_conversation_id,
+                Message.status.in_([MessageStatus.NORMAL, MessageStatus.STOP]),
+                Message.answer != "",
+                *filters,
+            )
+            .order_by(desc("created_at"))
+        )
+
+        message_ids = [message.id for message in messages]
+        agent_thoughts = (
+            self.db.session.query(MessageAgentThought)
+            .filter(MessageAgentThought.message_id.in_(message_ids))
+            .order_by(asc("position"))
+            .all()
+        )
+
+        agent_thoughts_map = {}
+        for agent_thought in agent_thoughts:
+            if str(agent_thought.message_id) not in agent_thoughts_map:
+                agent_thoughts_map[str(agent_thought.message_id)] = []
+            agent_thoughts_map[str(agent_thought.message_id)].append(
+                {
+                    "id": str(agent_thought.id),
+                    "position": agent_thought.position,
+                    "event": agent_thought.event,
+                    "thought": agent_thought.thought,
+                    "observation": agent_thought.observation,
+                    "tool": agent_thought.tool,
+                    "tool_input": agent_thought.tool_input,
+                    "latency": agent_thought.latency,
+                    "created_at": datetime_to_timestamp(agent_thought.created_at),
+                }
+            )
+
+        result = []
+        for message in messages:
+            result.append(
+                {
+                    "id": str(message.id),
+                    "conversation_id": str(message.conversation_id),
+                    "query": message.query,
+                    "answer": message.answer,
+                    "total_token_count": message.total_token_count,
+                    "latency": message.latency,
+                    "agent_thoughts": agent_thoughts_map.get(str(message.id), []),
+                    "created_at": datetime_to_timestamp(message.created_at),
+                }
+            )
+
+        return result, paginator

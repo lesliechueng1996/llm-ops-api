@@ -12,6 +12,7 @@ from internal.schema.app_schema import (
     FallbackHistoryReqSchema,
     GetAppConfigPublishHistoriesResSchema,
     GetAppResSchema,
+    GetConversationMessagesReqSchema,
     UpdateAppDebugSummaryReqSchema,
 )
 from internal.service import (
@@ -137,3 +138,14 @@ class AppHandler:
     def stop_debug_task(self, app_id: UUID, task_id: UUID):
         self.app_service.stop_debug_task(app_id, task_id, current_user)
         return success_message("停止调试任务成功")
+
+    @login_required
+    def get_conversation_messages_with_page(self, app_id: UUID):
+        req = GetConversationMessagesReqSchema()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        result, paginator = self.app_service.get_conversation_messages_with_page(
+            app_id, req, current_user
+        )
+        return success_json(PageModel(result, paginator))

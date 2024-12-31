@@ -5,11 +5,12 @@
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField
-from wtforms.validators import DataRequired, Length, URL, Optional
+from wtforms import StringField, IntegerField
+from wtforms.validators import DataRequired, Length, URL, Optional, NumberRange
 from marshmallow import Schema, fields, pre_dump
 from internal.lib.helper import datetime_to_timestamp
 from internal.model.app import AppConfigVersion
+from pkg.pagination import PaginationReq
 
 
 class DebugChatRequestSchema(FlaskForm):
@@ -97,3 +98,10 @@ class FallbackHistoryReqSchema(FlaskForm):
 
 class UpdateAppDebugSummaryReqSchema(FlaskForm):
     summary = StringField("summary")
+
+
+class GetConversationMessagesReqSchema(PaginationReq):
+    created_at = IntegerField(
+        "created_at",
+        validators=[Optional(), NumberRange(min=0, message="created_at必须大于等于0")],
+    )
