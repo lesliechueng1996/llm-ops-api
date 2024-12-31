@@ -286,27 +286,39 @@ class AppService:
                         )
                         self.db.session.add(message_agent_thought)
 
-                    if item["event"] == QueueEvent.AGENT_MESSAGE:
-                        with self.db.auto_commit():
-                            message.message = item["message"]
-                            message.answer = item["answer"]
-                            message.latency = latency
+                if item["event"] == QueueEvent.AGENT_MESSAGE:
+                    with self.db.auto_commit():
+                        message.message = item["message"]
+                        message.answer = item["answer"]
+                        message.latency = latency
 
-                        if draft_app_config["long_term_memory"]["enable"]:
-                            new_summary = self.conversation_service.summary(
-                                message.query,
-                                item["answer"],
-                                conversation.summary,
-                            )
+                    if draft_app_config["long_term_memory"]["enable"]:
+                        new_summary = self.conversation_service.summary(
+                            message.query,
+                            item["answer"],
+                            conversation.summary,
+                        )
 
-                            new_conversation_name = conversation.name
-                            if conversation.is_new:
-                                new_conversation_name = self.conversation_service.generate_conversation_name(
+                        new_conversation_name = conversation.name
+                        if conversation.is_new:
+                            new_conversation_name = (
+                                self.conversation_service.generate_conversation_name(
                                     message.query
                                 )
-                            with self.db.auto_commit():
-                                conversation.summary = new_summary
-                                conversation.name = new_conversation_name
+                            )
+                        with self.db.auto_commit():
+                            conversation.summary = new_summary
+                            conversation.name = new_conversation_name
+
+                if item["event"] in [QueueEvent.STOP, QueueEvent.ERROR]:
+                    with self.db.auto_commit():
+                        message.status = (
+                            MessageStatus.STOP
+                            if item["event"] == QueueEvent.STOP
+                            else MessageStatus.ERROR
+                        )
+                        message.observation = item["observation"]
+                    break
 
     def create_app(self, req: CreateAppReqSchema, account: Account) -> App:
         with self.db.auto_commit():
