@@ -472,6 +472,7 @@ class AppService:
         with self.db.auto_commit():
             for key, value in draft_app_config_dict.items():
                 setattr(current_draft_app_config, key, value)
+            current_draft_app_config.updated_at = datetime.now()
 
     def get_app_debug_summary(self, app_id: UUID, account: Account):
         app = self._get_app(app_id, account)
@@ -725,6 +726,7 @@ class AppService:
             "opening_questions": app_config_version.opening_questions,
             "speech_to_text": app_config_version.speech_to_text,
             "text_to_speech": app_config_version.text_to_speech,
+            "suggested_after_answer": app_config_version.suggested_after_answer,
             "review_config": app_config_version.review_config,
             "created_at": datetime_to_timestamp(app_config_version.created_at),
             "updated_at": datetime_to_timestamp(app_config_version.updated_at),
@@ -779,6 +781,7 @@ class AppService:
                 opening_questions=draft_app_config_dict["opening_questions"],
                 speech_to_text=draft_app_config_dict["speech_to_text"],
                 text_to_speech=draft_app_config_dict["text_to_speech"],
+                suggested_after_answer=draft_app_config_dict["suggested_after_answer"],
                 review_config=draft_app_config_dict["review_config"],
             )
             self.db.session.add(app_config)
@@ -851,6 +854,7 @@ class AppService:
             "speech_to_text",
             "text_to_speech",
             "review_config",
+            "suggested_after_answer",
         ]
 
         if (
@@ -1068,6 +1072,23 @@ class AppService:
             ):
                 raise ValidateErrorException(
                     "文本转语音配置无效：必须包含启用状态、自动播放和语音类型(仅支持echo)字段"
+                )
+
+        # 校验 suggested_after_answer
+        if "suggested_after_answer" in draft_app_config:
+            suggested_after_answer = draft_app_config["suggested_after_answer"]
+            if not suggested_after_answer or not isinstance(
+                suggested_after_answer, dict
+            ):
+                raise ValidateErrorException(
+                    "回答后建议问题配置格式错误：必须提供完整配置信息"
+                )
+
+            if set(suggested_after_answer.keys()) != {"enable"} or not isinstance(
+                suggested_after_answer["enable"], bool
+            ):
+                raise ValidateErrorException(
+                    "回答后建议问题配置缺失：必须包含且仅包含启用状态字段"
                 )
 
         # 校验 review_config

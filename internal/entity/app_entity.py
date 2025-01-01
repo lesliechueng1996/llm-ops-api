@@ -63,4 +63,7 @@ DEFAULT_APP_CONFIG = {
             "enable": False,
         },
     },
+    "suggested_after_answer": {
+        "enable": True,
+    },
 }

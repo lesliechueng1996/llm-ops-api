@@ -127,6 +127,9 @@ class AppConfig(db.Model):
     )
     speech_to_text = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     text_to_speech = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    suggested_after_answer = Column(
+        JSONB, nullable=False, server_default=text("'{\"enable\": true}'::jsonb")
+    )
     review_config = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     updated_at = Column(
         DateTime,
@@ -169,6 +172,9 @@ class AppConfigVersion(db.Model):
     )
     speech_to_text = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     text_to_speech = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    suggested_after_answer = Column(
+        JSONB, nullable=False, server_default=text("'{\"enable\": true}'::jsonb")
+    )
     review_config = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     version = Column(Integer, nullable=False, server_default=text("0"))
     config_type = Column(
