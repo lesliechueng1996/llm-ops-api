@@ -34,7 +34,6 @@ class BuiltinToolHandler:
         result = self.builtin_tool_service.get_provider_tool(provider_name, tool_name)
         return success_json(result)
 
-    @login_required
     def get_provider_icon(self, provider_name: str):
         icon_bytes, mimetype = self.builtin_tool_service.get_provider_icon(
             provider_name
