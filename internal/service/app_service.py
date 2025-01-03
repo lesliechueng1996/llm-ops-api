@@ -637,7 +637,7 @@ class AppService:
                     self.db.session.query(ApiTool)
                     .filter(
                         ApiTool.provider_id == draft_tool["provider_id"],
-                        ApiTool.name == draft_tool["tool_id"],
+                        ApiTool.id == draft_tool["tool_id"],
                     )
                     .one_or_none()
                 )
@@ -676,9 +676,7 @@ class AppService:
                 pass
 
         if validate_tools != app_config_version.tools:
-            logging.warning(
-                f"应用配置中存在无效工具: {set(app_config_version.tools) - set(validate_tools)}"
-            )
+            logging.warning(f"应用配置中存在无效工具")
             with self.db.auto_commit():
                 app_config_version.tools = validate_tools
 
@@ -927,7 +925,7 @@ class AppService:
                         self.db.session.query(ApiTool)
                         .filter(
                             ApiTool.provider_id == tool["provider_id"],
-                            ApiTool.name == tool["tool_id"],
+                            ApiTool.id == tool["tool_id"],
                             ApiTool.account_id == account.id,
                         )
                         .one_or_none()
