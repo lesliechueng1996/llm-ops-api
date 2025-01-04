@@ -90,7 +90,7 @@ class AppHandler:
 
     @login_required
     def get_publish_histories(self, app_id: UUID):
-        req = PaginationReq()
+        req = PaginationReq(request.args)
         if not req.validate():
             return validate_error_json(req.errors)
         histories, paginator = self.app_service.get_publish_histories(
@@ -141,7 +141,7 @@ class AppHandler:
 
     @login_required
     def get_conversation_messages_with_page(self, app_id: UUID):
-        req = GetConversationMessagesReqSchema()
+        req = GetConversationMessagesReqSchema(request.args)
         if not req.validate():
             return validate_error_json(req.errors)
 

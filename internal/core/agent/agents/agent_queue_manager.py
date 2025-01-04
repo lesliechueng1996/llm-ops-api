@@ -54,7 +54,8 @@ class AgentQueueManager:
                             id=uuid4(),
                             task_id=task_id,
                             event=QueueEvent.PING,
-                        )
+                        ),
+                        task_id,
                     )
                     last_ping_time = elapsed_time // 10
 

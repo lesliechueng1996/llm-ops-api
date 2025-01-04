@@ -211,7 +211,7 @@ class FunctionCallAgent(BaseAgent):
                     id=id,
                     task_id=state["task_id"],
                     event=QueueEvent.AGENT_THOUGHT,
-                    thought=json.dumps(gathered.tool_calls),
+                    thought=json.dumps(gathered.tool_calls, ensure_ascii=False),
                     message=messages_to_dict(state["messages"]),
                     latency=time.perf_counter() - start_at,
                 ),
@@ -250,7 +250,7 @@ class FunctionCallAgent(BaseAgent):
 
                 tool_messages.append(
                     ToolMessage(
-                        content=json.dumps(result),
+                        content=json.dumps(result, ensure_ascii=False),
                         name=tool_call["name"],
                         tool_call_id=tool_call["id"],
                     )
@@ -267,7 +267,7 @@ class FunctionCallAgent(BaseAgent):
                         id=id,
                         task_id=state["task_id"],
                         event=event,
-                        observation=json.dumps(result),
+                        observation=json.dumps(result, ensure_ascii=False),
                         tool=tool_call["name"],
                         tool_input=tool_call["args"],
                         latency=time.perf_counter() - start_at,

@@ -26,6 +26,7 @@ def dalle3(**kwargs) -> BaseTool:
             api_key=SecretStr(getenv("OPENAI_KEY")),
             base_url=getenv("OPENAI_API_URL"),
             **kwargs,
-        )
+        ),
+        args_schema=Dalle3ArgsSchema,
     )
     return dalle
