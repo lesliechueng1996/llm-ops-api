@@ -330,5 +330,9 @@ class Router:
             methods=["POST"],
             view_func=self.api_key_handler.create_api_key,
         )
-
+        bp.add_url_rule(
+            "/openapi/api-keys/<uuid:api_key_id>",
+            methods=["DELETE"],
+            view_func=self.api_key_handler.delete_api_key,
+        )
         app.register_blueprint(bp)
