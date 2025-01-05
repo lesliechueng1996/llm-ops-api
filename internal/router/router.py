@@ -335,4 +335,14 @@ class Router:
             methods=["DELETE"],
             view_func=self.api_key_handler.delete_api_key,
         )
+        bp.add_url_rule(
+            "/openapi/api-keys/<uuid:api_key_id>",
+            methods=["PUT"],
+            view_func=self.api_key_handler.update_api_key,
+        )
+        bp.add_url_rule(
+            "/openapi/api-keys/<uuid:api_key_id>/is-active",
+            methods=["PUT"],
+            view_func=self.api_key_handler.update_api_key_active,
+        )
         app.register_blueprint(bp)
