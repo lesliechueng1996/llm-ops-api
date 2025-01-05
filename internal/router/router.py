@@ -345,4 +345,8 @@ class Router:
             methods=["PUT"],
             view_func=self.api_key_handler.update_api_key_active,
         )
+        bp.add_url_rule(
+            "/openapi/api-keys",
+            view_func=self.api_key_handler.get_api_keys_pagination,
+        )
         app.register_blueprint(bp)

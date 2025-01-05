@@ -8,9 +8,12 @@ import secrets
 from uuid import UUID
 from injector import inject
 from dataclasses import dataclass
+
+from sqlalchemy import desc
 from internal.model.account import Account
 from internal.model.api_key import ApiKey
 from internal.schema.api_key_schema import CreateApiKeyReqSchema
+from pkg.pagination import PaginationReq, Paginator
 from pkg.sqlalchemy import SQLAlchemy
 from internal.exception import NotFoundException
 
@@ -65,6 +68,17 @@ class ApiKeyService:
 
         with self.db.auto_commit():
             api_key.is_active = is_active
+
+    def get_api_keys_pagination(self, req: PaginationReq, account: Account):
+        paginator = Paginator(self.db, req)
+
+        result = paginator.paginate(
+            self.db.session.query(ApiKey)
+            .filter(ApiKey.account_id == account.id)
+            .order_by(desc("created_at"))
+        )
+
+        return result, paginator
 
     def generate_api_key(self, api_key_prefix: str = "llmops-v1/") -> str:
         return api_key_prefix + secrets.token_urlsafe(48)

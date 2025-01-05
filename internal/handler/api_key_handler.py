@@ -9,12 +9,14 @@ from injector import inject
 from dataclasses import dataclass
 from internal.schema.api_key_schema import (
     CreateApiKeyReqSchema,
+    GetApiKeysPaginationResSchema,
     UpdateApiKeyActiveReqSchema,
     UpdateApiKeyReqSchema,
 )
 from internal.service import ApiKeyService
-from pkg.response import validate_error_json, success_message
+from pkg.response import validate_error_json, success_message, success_json
 from flask_login import login_required, current_user
+from pkg.pagination import PaginationReq, PageModel
 
 
 @inject
@@ -53,3 +55,16 @@ class ApiKeyHandler:
             api_key_id, req.is_active.data, current_user
         )
         return success_message("更新成功")
+
+    @login_required
+    def get_api_keys_pagination(self):
+        req = PaginationReq()
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        schema = GetApiKeysPaginationResSchema(many=True)
+        api_keys, paginator = self.api_key_service.get_api_keys_pagination(
+            req, current_user
+        )
+
+        return success_json(PageModel(schema.dump(api_keys), paginator))
