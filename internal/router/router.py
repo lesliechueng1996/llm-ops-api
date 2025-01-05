@@ -20,6 +20,7 @@ from internal.handler import (
     AccountHandler,
     AuthHandler,
     AIHandler,
+    ApiKeyHandler,
 )
 
 
@@ -39,6 +40,7 @@ class Router:
     account_handler: AccountHandler
     auth_handler: AuthHandler
     ai_handler: AIHandler
+    api_key_handler: ApiKeyHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -320,6 +322,13 @@ class Router:
             "/ai/suggested-questions",
             methods=["POST"],
             view_func=self.ai_handler.suggested_questions,
+        )
+
+        # OpenAPI
+        bp.add_url_rule(
+            "/openapi/api-keys",
+            methods=["POST"],
+            view_func=self.api_key_handler.create_api_key,
         )
 
         app.register_blueprint(bp)
