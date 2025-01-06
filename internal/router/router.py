@@ -21,6 +21,7 @@ from internal.handler import (
     AuthHandler,
     AIHandler,
     ApiKeyHandler,
+    OpenapiHandler,
 )
 
 
@@ -41,10 +42,13 @@ class Router:
     auth_handler: AuthHandler
     ai_handler: AIHandler
     api_key_handler: ApiKeyHandler
+    openapi_handler: OpenapiHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
         bp = Blueprint("llmops", __name__, url_prefix="")
+        openapi_bp = Blueprint("openapi", __name__, url_prefix="")
+
         bp.add_url_rule("/ping", view_func=self.app_handler.ping)
         bp.add_url_rule(
             "/apps/<uuid:app_id>/conversations",
@@ -349,4 +353,10 @@ class Router:
             "/openapi/api-keys",
             view_func=self.api_key_handler.get_api_keys_pagination,
         )
+        openapi_bp.add_url_rule(
+            "/openapi/chat",
+            methods=["POST"],
+            view_func=self.openapi_handler.chat,
+        )
         app.register_blueprint(bp)
+        app.register_blueprint(openapi_bp)

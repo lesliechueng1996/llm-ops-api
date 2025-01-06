@@ -46,6 +46,13 @@ class ApiKeyService:
 
         return api_key
 
+    def get_api_key_record(self, api_key: str):
+        return (
+            self.db.session.query(ApiKey)
+            .filter(ApiKey.api_key == api_key)
+            .one_or_none()
+        )
+
     def delete_api_key(self, api_key_id: UUID, account: Account) -> None:
         api_key = self.get_api_key(api_key_id, account)
 
