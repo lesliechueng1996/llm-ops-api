@@ -22,7 +22,7 @@ from internal.exception.exception import NotFoundException
 from internal.lib.helper import datetime_to_timestamp
 from internal.model.account import Account
 from internal.model.api_tool import ApiTool, ApiToolProvider
-from internal.model.app import App, AppConfig, AppConfigVersion
+from internal.model.app import App, AppConfig, AppConfigVersion, AppDatasetJoin
 from internal.model.dataset import Dataset
 from pkg.sqlalchemy import SQLAlchemy
 from langchain_core.tools import BaseTool
@@ -74,7 +74,43 @@ class AppConfigService:
         )
 
     def get_app_config(self, app: App) -> dict[str, Any]:
-        pass
+        app_config_id = app.app_config_id
+        app_config = (
+            self.db.session.query(AppConfig)
+            .filter(AppConfig.id == app_config_id)
+            .one_or_none()
+        )
+
+        if app_config is None:
+            raise NotFoundException("应用配置不存在")
+
+        validate_tools, tools = self._process_validate_tools(app_config.tools)
+
+        if validate_tools != app_config.tools:
+            logging.warning(f"应用配置中存在无效工具")
+            with self.db.auto_commit():
+                app_config.tools = validate_tools
+
+        dataset_joins = (
+            self.db.session.query(AppDatasetJoin)
+            .filter(AppDatasetJoin.app_id == app.id)
+            .all()
+        )
+        dataset_ids = [str(dataset_join.dataset_id) for dataset_join in dataset_joins]
+
+        validate_datasets, datasets = self._process_validate_datasets(dataset_ids)
+
+        remove_dataset_ids = list(set(dataset_ids) - set(validate_datasets))
+        if remove_dataset_ids:
+            logging.warning("应用配置中存在无效知识库")
+            with self.db.auto_commit():
+                self.db.session.query(AppDatasetJoin).filter(
+                    AppDatasetJoin.dataset_id.in_(remove_dataset_ids)
+                ).delete()
+
+        # TODO 校验工作流
+
+        return self._process_transform_app_config(tools, [], datasets, app_config)
 
     def get_langchain_tools_by_tool_config(
         self, tool_config: list[dict], account: Account
@@ -220,7 +256,7 @@ class AppConfigService:
 
         return validate_tools, tools
 
-    def _process_validate_datasets(self, original_datasets: list[UUID]) -> list[dict]:
+    def _process_validate_datasets(self, original_datasets: list[str]) -> list[dict]:
         datasets = []
         dataset_records = (
             self.db.session.query(Dataset)

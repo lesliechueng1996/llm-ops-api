@@ -168,7 +168,7 @@ class AppService:
                 "flask_app": current_app._get_current_object(),
                 "account_id": account.id,
                 "app_id": app_id,
-                "draft_app_config": draft_app_config,
+                "app_config": draft_app_config,
                 "conversation_id": debug_conversation.id,
                 "message_id": message.id,
                 "agent_thoughts": [
@@ -462,7 +462,7 @@ class AppService:
                     {
                         "type": tool["type"],
                         "provider_id": tool["provider"]["id"],
-                        "tool_id": tool["tool"]["name"],
+                        "tool_id": tool["tool"]["id"],
                         "params": tool["tool"]["params"],
                     }
                     for tool in draft_app_config_dict["tools"]
@@ -870,6 +870,9 @@ class AppService:
                     )
 
         return draft_app_config
+
+    def get_and_validate_app(self, app_id: UUID, account: Account) -> App:
+        return self._get_app(app_id, account)
 
     def _get_app(self, app_id: UUID, account: Account) -> App:
         app = (

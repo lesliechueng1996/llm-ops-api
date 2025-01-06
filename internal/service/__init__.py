@@ -25,6 +25,7 @@ from .oauth_service import OAuthService
 from .ai_service import AIService
 from .api_key_service import ApiKeyService
 from .app_config_serice import AppConfigService
+from .openapi_service import OpenapiService
 
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "AIService",
     "ApiKeyService",
     "AppConfigService",
+    "OpenapiService",
 ]

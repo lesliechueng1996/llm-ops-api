@@ -65,7 +65,7 @@ class BaseAgent(Serializable, Runnable):
         for agent_thought in self.stream(input, config):
             if agent_thought.event == QueueEvent.PING:
                 continue
-            event_id = agent_thought.event_id
+            event_id = agent_thought.id
             if agent_thought.event == QueueEvent.AGENT_MESSAGE:
                 if event_id not in agent_thoughts:
                     agent_thoughts[event_id] = agent_thought
@@ -74,8 +74,8 @@ class BaseAgent(Serializable, Runnable):
                         update={
                             "thought": agent_thoughts[event_id].thought
                             + agent_thought.thought,
-                            "answers": agent_thoughts[event_id].answers
-                            + agent_thought.answers,
+                            "answer": agent_thoughts[event_id].answer
+                            + agent_thought.answer,
                             "latency": agent_thought.latency,
                         }
                     )
@@ -95,7 +95,7 @@ class BaseAgent(Serializable, Runnable):
                         else ""
                     )
 
-        result.thoughts = list(agent_thoughts.values())
+        result.agent_thoughts = list(agent_thoughts.values())
         result.message = next(
             (
                 agent_thought.message
