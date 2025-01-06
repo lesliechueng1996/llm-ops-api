@@ -8,6 +8,8 @@ from enum import Enum
 from uuid import UUID
 from pydantic import BaseModel, Field
 
+from internal.entity.conversation_entity import MessageStatus
+
 
 class QueueEvent(str, Enum):
     LONG_TERM_MEMORY_RECALL = "long_term_memory_recall"  # 长期记忆召回事件
@@ -49,4 +51,23 @@ class AgentThought(BaseModel):
 
 
 class AgentResult(BaseModel):
-    pass
+    query: str
+
+    message: list[dict] = Field(default_factory=list)
+    message_token_count: int = 0
+    message_unit_price: float = 0
+    message_price_unit: float = 0
+
+    answer: str = ""
+    answer_token_count: int = 0
+    answer_unit_price: float = 0
+    answer_price_unit: float = 0
+
+    total_token_count: int = 0
+    total_price: float = 0
+    latency: float = 0
+
+    status: str = MessageStatus.NORMAL
+    error: str = ""
+
+    agent_thoughts: list[AgentThought] = Field(default_factory=list)

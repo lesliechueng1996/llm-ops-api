@@ -19,14 +19,14 @@ from pkg.sqlalchemy import SQLAlchemy
 from internal.model import ApiToolProvider, ApiTool
 from pkg.pagination import Paginator
 from sqlalchemy import desc
-from internal.core.tools.api_tools.providers import ApiProviderManger
+from internal.core.tools.api_tools.providers import ApiProviderManager
 
 
 @inject
 @dataclass
 class ApiToolService:
     db: SQLAlchemy
-    api_provider_manager: ApiProviderManger
+    api_provider_manager: ApiProviderManager
 
     def validate_openapi_schema(self, openapi_schema_str: str):
         try:

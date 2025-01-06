@@ -16,7 +16,7 @@ from internal.core.tools.api_tools.entities import ParameterTypeMap, ParameterIn
 
 @inject
 @dataclass
-class ApiProviderManger:
+class ApiProviderManager:
     def _create_tool_func_from_entity(self, tool_entity: ToolEntity):
         def tool_func(**kwargs):
             params = {

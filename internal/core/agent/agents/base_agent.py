@@ -12,7 +12,11 @@ from internal.core.agent.entities import AgentConfig
 from langchain_core.messages import AnyMessage
 
 from internal.core.agent.entities.agent_entity import AgentState
-from internal.core.agent.entities.queue_entity import AgentResult, AgentThought
+from internal.core.agent.entities.queue_entity import (
+    AgentResult,
+    AgentThought,
+    QueueEvent,
+)
 from internal.exception.exception import FailException
 from .agent_queue_manager import AgentQueueManager
 from langchain_core.runnables import Runnable
@@ -55,7 +59,56 @@ class BaseAgent(Serializable, Runnable):
     def invoke(
         self, input: AgentState, config: Optional[RunnableConfig] = None
     ) -> AgentResult:
-        pass
+        result = AgentResult(query=input["messages"][0].content)
+        agent_thoughts = {}
+
+        for agent_thought in self.stream(input, config):
+            if agent_thought.event == QueueEvent.PING:
+                continue
+            event_id = agent_thought.event_id
+            if agent_thought.event == QueueEvent.AGENT_MESSAGE:
+                if event_id not in agent_thoughts:
+                    agent_thoughts[event_id] = agent_thought
+                else:
+                    agent_thoughts[event_id] = agent_thoughts[event_id].model_copy(
+                        update={
+                            "thought": agent_thoughts[event_id].thought
+                            + agent_thought.thought,
+                            "answers": agent_thoughts[event_id].answers
+                            + agent_thought.answers,
+                            "latency": agent_thought.latency,
+                        }
+                    )
+                result.answer += agent_thought.answer
+            else:
+                agent_thoughts[event_id] = agent_thought
+
+                if agent_thought.event in [
+                    QueueEvent.ERROR,
+                    QueueEvent.STOP,
+                    QueueEvent.TIMEOUT,
+                ]:
+                    result.status = agent_thought.event
+                    result.error = (
+                        agent_thought.observation
+                        if agent_thought.event == QueueEvent.ERROR
+                        else ""
+                    )
+
+        result.thoughts = list(agent_thoughts.values())
+        result.message = next(
+            (
+                agent_thought.message
+                for agent_thought in agent_thoughts.values()
+                if agent_thought.event == QueueEvent.AGENT_MESSAGE
+            ),
+            [],
+        )
+        result.latency = sum(
+            agent_thought.latency for agent_thought in agent_thoughts.values()
+        )
+
+        return result
 
     def stream(
         self, input: AgentState, config: Optional[RunnableConfig] = None, **kwargs

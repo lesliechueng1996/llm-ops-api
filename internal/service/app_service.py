@@ -12,13 +12,13 @@ from typing import Any
 from redis import Redis
 from internal.core.agent.agents.agent_queue_manager import AgentQueueManager
 from internal.core.agent.entities.queue_entity import QueueEvent
-from internal.core.tools.api_tools.entities.tool_entity import ToolEntity
-from internal.model import Account, ApiTool, ApiToolProvider, Dataset, AppConfig
+from internal.model import Account, ApiTool, Dataset, AppConfig
 from internal.model.conversation import Conversation, Message, MessageAgentThought
 from internal.schema.app_schema import (
     CreateAppReqSchema,
     GetConversationMessagesReqSchema,
 )
+from internal.service.app_config_serice import AppConfigService
 from internal.service.conversation_service import ConversationService
 from pkg.sqlalchemy import SQLAlchemy
 from dataclasses import dataclass
@@ -28,9 +28,6 @@ from uuid import UUID
 from internal.entity.app_entity import AppStatus, AppConfigType, DEFAULT_APP_CONFIG
 from internal.exception import NotFoundException, ValidateErrorException, FailException
 from internal.core.tools.builtin_tools.providers import BuiltinProviderManager
-from internal.core.tools.api_tools.providers import ApiProviderManger
-from flask import Flask, request
-import logging
 from internal.lib.helper import datetime_to_timestamp
 from sqlalchemy import asc, desc, func
 from pkg.pagination import PaginationReq, Paginator
@@ -50,10 +47,10 @@ from langchain_core.messages import HumanMessage
 class AppService:
     db: SQLAlchemy
     builtin_provider_manager: BuiltinProviderManager
-    api_provider_manager: ApiProviderManger
     retrieval_service: RetrievalService
     redis_client: Redis
     conversation_service: ConversationService
+    app_config_service: AppConfigService
 
     def debug_chat(self, app_id: UUID, query: str, account: Account):
         app = self._get_app(app_id, account)
@@ -89,48 +86,10 @@ class AppService:
             max_message_limit=draft_app_config["dialog_round"],
         )
 
-        tools = []
-        for tool in draft_app_config["tools"]:
-            if tool["type"] == "builtin_tool":
-                builtin_tool = self.builtin_provider_manager.get_tool(
-                    tool["provider"]["id"],
-                    tool["tool"]["name"],
-                )
-                if not builtin_tool:
-                    continue
-                tools.append(builtin_tool(**tool["tool"]["params"]))
-            if tool["type"] == "api_tool":
-                api_tool_record = (
-                    self.db.session.query(ApiTool)
-                    .filter(
-                        ApiTool.account_id == account.id,
-                        ApiTool.id == tool["tool"]["id"],
-                    )
-                    .one_or_none()
-                )
-                if not api_tool_record:
-                    continue
-                api_tool_provider_record = (
-                    self.db.session.query(ApiToolProvider)
-                    .filter(
-                        ApiToolProvider.id == api_tool_record.provider_id,
-                    )
-                    .one_or_none()
-                )
-                if not api_tool_provider_record:
-                    continue
-                api_tool = self.api_provider_manager.get_tool(
-                    ToolEntity(
-                        provider_id=str(api_tool_record.provider_id),
-                        name=api_tool_record.name,
-                        url=api_tool_record.url,
-                        method=api_tool_record.method,
-                        description=api_tool_record.description,
-                        headers=api_tool_provider_record.headers,
-                        parameters=api_tool_record.parameters,
-                    )
-                )
-                tools.append(api_tool)
+        tools = self.app_config_service.get_langchain_tools_by_tool_config(
+            draft_app_config["tools"],
+            account=account,
+        )
 
         if draft_app_config["datasets"]:
             dataset_retrieval = (
@@ -171,57 +130,40 @@ class AppService:
             if agent_thought.event != QueueEvent.PING:
                 if agent_thought.event == QueueEvent.AGENT_MESSAGE:
                     if event_id not in agent_thoughts:
-                        agent_thoughts[event_id] = {
-                            "id": event_id,
-                            "task_id": str(agent_thought.task_id),
-                            "event": agent_thought.event,
-                            "thought": agent_thought.thought,
-                            "observation": agent_thought.observation,
-                            "tool": agent_thought.tool,
-                            "tool_input": agent_thought.tool_input,
-                            "message": agent_thought.message,
-                            "answer": agent_thought.answer,
-                            "latency": agent_thought.latency,
-                        }
+                        agent_thoughts[event_id] = agent_thought
                     else:
-                        agent_thoughts[event_id] = {
-                            **agent_thoughts[event_id],
-                            "thought": f"{agent_thoughts[event_id]['thought']}{agent_thought.thought}",
-                            "answer": f"{agent_thoughts[event_id]['answer']}{agent_thought.answer}",
-                            "latency": agent_thought.latency,
-                        }
+                        agent_thoughts[event_id] = agent_thoughts[event_id].model_copy(
+                            update={
+                                "thought": f"{agent_thoughts[event_id].thought}{agent_thought.thought}",
+                                "answer": f"{agent_thoughts[event_id].answer}{agent_thought.answer}",
+                                "latency": agent_thought.latency,
+                            }
+                        )
                 else:
-                    agent_thoughts[event_id] = {
-                        "id": event_id,
-                        "task_id": str(agent_thought.task_id),
-                        "event": agent_thought.event,
-                        "thought": agent_thought.thought,
-                        "observation": agent_thought.observation,
-                        "tool": agent_thought.tool,
-                        "tool_input": agent_thought.tool_input,
-                        "message": agent_thought.message,
-                        "answer": agent_thought.answer,
-                        "latency": agent_thought.latency,
-                    }
+                    agent_thoughts[event_id] = agent_thought
 
             data = {
+                **agent_thought.model_dump(
+                    include={
+                        "event",
+                        "thought",
+                        "observation",
+                        "tool",
+                        "tool_input",
+                        "answer",
+                        "latency",
+                    }
+                ),
                 "id": event_id,
                 "conversation_id": str(debug_conversation.id),
                 "message_id": str(message.id),
                 "task_id": str(agent_thought.task_id),
-                "event": agent_thought.event,
-                "thought": agent_thought.thought,
-                "observation": agent_thought.observation,
-                "tool": agent_thought.tool,
-                "tool_input": agent_thought.tool_input,
-                "answer": agent_thought.answer,
-                "latency": agent_thought.latency,
             }
 
             yield f"event: {agent_thought.event}\ndata: {json.dumps(data)}\n\n"
 
         thread = Thread(
-            target=self._save_agent_thoughts,
+            target=self.conversation_service.save_agent_thoughts,
             kwargs={
                 "flask_app": current_app._get_current_object(),
                 "account_id": account.id,
@@ -229,100 +171,12 @@ class AppService:
                 "draft_app_config": draft_app_config,
                 "conversation_id": debug_conversation.id,
                 "message_id": message.id,
-                "agent_thoughts": agent_thoughts,
+                "agent_thoughts": [
+                    agent_thought for agent_thought in agent_thoughts.values()
+                ],
             },
         )
         thread.start()
-
-    def _save_agent_thoughts(
-        self,
-        flask_app: Flask,
-        account_id: UUID,
-        app_id: UUID,
-        draft_app_config: dict,
-        conversation_id: UUID,
-        message_id: UUID,
-        agent_thoughts: dict[str, Any],
-    ):
-        with flask_app.app_context():
-            position = 0
-            latency = 0
-
-            conversation = (
-                self.db.session.query(Conversation)
-                .filter(Conversation.id == conversation_id)
-                .one_or_none()
-            )
-            message = (
-                self.db.session.query(Message)
-                .filter(Message.id == message_id)
-                .one_or_none()
-            )
-
-            for key, item in agent_thoughts.items():
-                if item["event"] in [
-                    QueueEvent.LONG_TERM_MEMORY_RECALL,
-                    QueueEvent.AGENT_THOUGHT,
-                    QueueEvent.AGENT_MESSAGE,
-                    QueueEvent.AGENT_ACTION,
-                    QueueEvent.DATASET_RETRIEVAL,
-                ]:
-                    position += 1
-                    latency += item["latency"]
-
-                    with self.db.auto_commit():
-                        message_agent_thought = MessageAgentThought(
-                            app_id=app_id,
-                            conversation_id=conversation_id,
-                            message_id=message.id,
-                            invoke_from=InvokeFrom.DEBUGGER,
-                            created_by=account_id,
-                            position=position,
-                            event=item["event"],
-                            thought=item["thought"],
-                            observation=item["observation"],
-                            tool=item["tool"],
-                            tool_input=item["tool_input"],
-                            message=item["message"],
-                            answer=item["answer"],
-                            latency=item["latency"],
-                        )
-                        self.db.session.add(message_agent_thought)
-
-                if item["event"] == QueueEvent.AGENT_MESSAGE:
-                    with self.db.auto_commit():
-                        message.message = item["message"]
-                        message.answer = item["answer"]
-                        message.latency = latency
-
-                    if draft_app_config["long_term_memory"]["enable"]:
-                        new_summary = self.conversation_service.summary(
-                            message.query,
-                            item["answer"],
-                            conversation.summary,
-                        )
-
-                        with self.db.auto_commit():
-                            conversation.summary = new_summary
-
-                    if conversation.is_new:
-                        new_conversation_name = (
-                            self.conversation_service.generate_conversation_name(
-                                message.query
-                            )
-                        )
-                        with self.db.auto_commit():
-                            conversation.name = new_conversation_name
-
-                if item["event"] in [QueueEvent.STOP, QueueEvent.ERROR]:
-                    with self.db.auto_commit():
-                        message.status = (
-                            MessageStatus.STOP
-                            if item["event"] == QueueEvent.STOP
-                            else MessageStatus.ERROR
-                        )
-                        message.observation = item["observation"]
-                    break
 
     def create_app(self, req: CreateAppReqSchema, account: Account) -> App:
         with self.db.auto_commit():
@@ -569,166 +423,7 @@ class AppService:
 
     def get_draft_app_config(self, app_id: UUID, account: Account):
         app = self._get_app(app_id, account)
-
-        draft_app_config_id = app.draft_app_config_id
-        app_config_version = (
-            self.db.session.query(AppConfigVersion)
-            .filter(
-                AppConfigVersion.id == draft_app_config_id,
-                AppConfigVersion.config_type == AppConfigType.DRAFT,
-            )
-            .one_or_none()
-        )
-
-        if app_config_version is None:
-            raise NotFoundException("应用配置不存在")
-
-        # 校验工具
-        validate_tools = []
-        tools = []
-        for draft_tool in app_config_version.tools:
-            if draft_tool["type"] == "builtin_tool":
-                provider = self.builtin_provider_manager.get_provider(
-                    draft_tool["provider_id"]
-                )
-                if not provider:
-                    continue
-                tool_entity = provider.get_tool_entity(draft_tool["tool_id"])
-                if not tool_entity:
-                    continue
-
-                tool_params = set([param.name for param in tool_entity.params])
-                params = draft_tool["params"]
-                if set(draft_tool["params"].keys()) - tool_params:
-                    params = {
-                        param.name: param.default
-                        for param in tool_entity.params
-                        if param.default is not None
-                    }
-
-                provider_entity = provider.provider_entity
-                validate_tools.append(
-                    {
-                        **draft_tool,
-                        "params": params,
-                    }
-                )
-                tools.append(
-                    {
-                        "type": "builtin_tool",
-                        "provider": {
-                            "id": provider_entity.name,
-                            "name": provider_entity.name,
-                            "label": provider_entity.label,
-                            "icon": f"{request.scheme}://{request.host}/builtin-tools/{provider_entity.name}/icon",
-                            "description": provider_entity.description,
-                        },
-                        "tool": {
-                            "id": tool_entity.name,
-                            "name": tool_entity.name,
-                            "label": tool_entity.label,
-                            "description": tool_entity.description,
-                            "params": draft_tool["params"],
-                        },
-                    }
-                )
-            if draft_tool["type"] == "api_tool":
-                tool_record = (
-                    self.db.session.query(ApiTool)
-                    .filter(
-                        ApiTool.provider_id == draft_tool["provider_id"],
-                        ApiTool.id == draft_tool["tool_id"],
-                    )
-                    .one_or_none()
-                )
-                if not tool_record:
-                    continue
-
-                tool_provider = (
-                    self.db.session.query(ApiToolProvider)
-                    .filter(ApiToolProvider.id == tool_record.provider_id)
-                    .one_or_none()
-                )
-
-                if not tool_provider:
-                    continue
-
-                validate_tools.append(draft_tool)
-                tools.append(
-                    {
-                        "type": "api_tool",
-                        "provider": {
-                            "id": str(tool_provider.id),
-                            "name": tool_record.name,
-                            "label": tool_record.name,
-                            "icon": tool_provider.icon,
-                            "description": tool_provider.description,
-                        },
-                        "tool": {
-                            "id": str(tool_record.id),
-                            "name": tool_record.name,
-                            "label": tool_record.name,
-                            "description": tool_record.description,
-                            "params": {},
-                        },
-                    }
-                )
-                pass
-
-        if validate_tools != app_config_version.tools:
-            logging.warning(f"应用配置中存在无效工具")
-            with self.db.auto_commit():
-                app_config_version.tools = validate_tools
-
-        # 校验知识库
-        datasets = []
-        dataset_records = (
-            self.db.session.query(Dataset)
-            .filter(
-                Dataset.id.in_(app_config_version.datasets),
-            )
-            .all()
-        )
-        dataset_map = {str(dataset.id): dataset for dataset in dataset_records}
-
-        if len(dataset_records) != len(app_config_version.datasets):
-            logging.warning("应用配置中存在无效知识库")
-            with self.db.auto_commit():
-                app_config_version.datasets = [
-                    dataset.id for dataset in dataset_records
-                ]
-        for dataset_id in app_config_version.datasets:
-            dataset = dataset_map.get(dataset_id)
-            datasets.append(
-                {
-                    "id": dataset.id,
-                    "name": dataset.name,
-                    "icon": dataset.icon,
-                    "description": dataset.description,
-                }
-            )
-
-        # TODO 校验工作流
-
-        return {
-            "id": str(app_config_version.id),
-            "model_config": app_config_version.model_config,
-            "dialog_round": app_config_version.dialog_round,
-            "preset_prompt": app_config_version.preset_prompt,
-            "tools": tools,
-            "workflows": [],
-            "datasets": datasets,
-            "retrieval_config": app_config_version.retrieval_config,
-            "long_term_memory": app_config_version.long_term_memory,
-            "opening_statement": app_config_version.opening_statement,
-            "opening_questions": app_config_version.opening_questions,
-            "speech_to_text": app_config_version.speech_to_text,
-            "text_to_speech": app_config_version.text_to_speech,
-            "suggested_after_answer": app_config_version.suggested_after_answer,
-            "review_config": app_config_version.review_config,
-            "created_at": datetime_to_timestamp(app_config_version.created_at),
-            "updated_at": datetime_to_timestamp(app_config_version.updated_at),
-        }
+        return self.app_config_service.get_draft_app_config(app)
 
     def update_draft_app_config(
         self, app_id: UUID, draft_app_config: dict[str, Any], account: Account

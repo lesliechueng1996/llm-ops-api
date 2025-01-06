@@ -5,8 +5,12 @@
 """
 
 import logging
+from typing import Any
+from uuid import UUID
+from flask import Flask
 from injector import inject
 from dataclasses import dataclass
+from internal.core.agent.entities.queue_entity import AgentThought, QueueEvent
 from internal.entity import (
     SUMMARIZER_TEMPLATE,
     CONVERSATION_NAME_TEMPLATE,
@@ -19,10 +23,15 @@ from langchain_openai import ChatOpenAI
 from os import getenv
 from langchain_core.output_parsers import StrOutputParser
 
+from internal.entity.conversation_entity import InvokeFrom, MessageStatus
+from internal.model.conversation import Conversation, Message, MessageAgentThought
+from pkg.sqlalchemy.sqlalchemy import SQLAlchemy
+
 
 @inject
 @dataclass
 class ConversationService:
+    db: SQLAlchemy
 
     def summary(
         self, human_message: str, ai_message: str, old_summary: str = ""
@@ -113,3 +122,91 @@ class ConversationService:
             questions = questions[:3]
 
         return questions
+
+    def save_agent_thoughts(
+        self,
+        flask_app: Flask,
+        account_id: UUID,
+        app_id: UUID,
+        draft_app_config: dict,
+        conversation_id: UUID,
+        message_id: UUID,
+        agent_thoughts: list[AgentThought],
+    ):
+        with flask_app.app_context():
+            position = 0
+            latency = 0
+
+            conversation = (
+                self.db.session.query(Conversation)
+                .filter(Conversation.id == conversation_id)
+                .one_or_none()
+            )
+            message = (
+                self.db.session.query(Message)
+                .filter(Message.id == message_id)
+                .one_or_none()
+            )
+
+            for agent_thought in agent_thoughts:
+                if agent_thought.event in [
+                    QueueEvent.LONG_TERM_MEMORY_RECALL,
+                    QueueEvent.AGENT_THOUGHT,
+                    QueueEvent.AGENT_MESSAGE,
+                    QueueEvent.AGENT_ACTION,
+                    QueueEvent.DATASET_RETRIEVAL,
+                ]:
+                    position += 1
+                    latency += agent_thought.latency
+
+                    with self.db.auto_commit():
+                        message_agent_thought = MessageAgentThought(
+                            app_id=app_id,
+                            conversation_id=conversation_id,
+                            message_id=message.id,
+                            invoke_from=InvokeFrom.DEBUGGER,
+                            created_by=account_id,
+                            position=position,
+                            event=agent_thought.event,
+                            thought=agent_thought.thought,
+                            observation=agent_thought.observation,
+                            tool=agent_thought.tool,
+                            tool_input=agent_thought.tool_input,
+                            message=agent_thought.message,
+                            answer=agent_thought.answer,
+                            latency=agent_thought.latency,
+                        )
+                        self.db.session.add(message_agent_thought)
+
+                if agent_thought.event == QueueEvent.AGENT_MESSAGE:
+                    with self.db.auto_commit():
+                        message.message = agent_thought.message
+                        message.answer = agent_thought.answer
+                        message.latency = latency
+
+                    if draft_app_config["long_term_memory"]["enable"]:
+                        new_summary = self.summary(
+                            message.query,
+                            agent_thought.answer,
+                            conversation.summary,
+                        )
+
+                        with self.db.auto_commit():
+                            conversation.summary = new_summary
+
+                    if conversation.is_new:
+                        new_conversation_name = self.generate_conversation_name(
+                            message.query
+                        )
+                        with self.db.auto_commit():
+                            conversation.name = new_conversation_name
+
+                if agent_thought.event in [
+                    QueueEvent.STOP,
+                    QueueEvent.ERROR,
+                    QueueEvent.TIMEOUT,
+                ]:
+                    with self.db.auto_commit():
+                        message.status = agent_thought.event
+                        message.observation = agent_thought.observation
+                    break

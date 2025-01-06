@@ -4,6 +4,6 @@
 @File   : __init__.py
 """
 
-from .api_provider_manager import ApiProviderManger
+from .api_provider_manager import ApiProviderManager
 
-__all__ = ["ApiProviderManger"]
+__all__ = ["ApiProviderManager"]

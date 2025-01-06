@@ -105,6 +105,7 @@ class MessageStatus(str, Enum):
     NORMAL = "normal"
     STOP = "stop"
     ERROR = "error"
+    TIMEOUT = "timeout"
 
 
 class InvokeFrom(str, Enum):
