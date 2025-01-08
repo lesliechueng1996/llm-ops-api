@@ -175,3 +175,8 @@ class AppHandler:
         result, paginator = self.app_service.get_apps_pagination(req, current_user)
         schema = GetAppDebugSummaryResSchema(many=True)
         return success_json(PageModel(schema.dump(result), paginator))
+
+    @login_required
+    def copy_app(self, app_id: UUID):
+        new_app_id = self.app_service.copy_app(app_id, current_user)
+        return success_json({"app_id": new_app_id})

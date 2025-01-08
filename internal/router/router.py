@@ -122,6 +122,11 @@ class Router:
             view_func=self.app_handler.delete_app,
         )
         bp.add_url_rule("/apps", view_func=self.app_handler.get_apps_pagination)
+        bp.add_url_rule(
+            "/apps/<uuid:app_id>/copy",
+            methods=["POST"],
+            view_func=self.app_handler.copy_app,
+        )
 
         # built-in tools
         bp.add_url_rule(

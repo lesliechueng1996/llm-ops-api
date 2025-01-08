@@ -1049,3 +1049,51 @@ class AppService:
         ]
 
         return app_dict_list, paginator
+
+    def copy_app(self, app_id: UUID, account: Account):
+        app = self._get_app(app_id, account)
+
+        draft_config = (
+            self.db.session.query(AppConfigVersion)
+            .filter(AppConfigVersion.id == app.draft_app_config_id)
+            .one_or_none()
+        )
+
+        if not draft_config:
+            raise NotFoundException("应用配置不存在")
+
+        with self.db.auto_commit():
+            new_app = App(
+                account_id=account.id,
+                name=f"{app.name} - 复制",
+                icon=app.icon,
+                description=app.description,
+                status=AppStatus.DRAFT,
+            )
+            self.db.session.add(new_app)
+            self.db.session.flush()
+
+            new_draft_config = AppConfigVersion(
+                app_id=new_app.id,
+                model_config=draft_config.model_config,
+                dialog_round=draft_config.dialog_round,
+                preset_prompt=draft_config.preset_prompt,
+                tools=draft_config.tools,
+                workflows=draft_config.workflows,
+                datasets=draft_config.datasets,
+                retrieval_config=draft_config.retrieval_config,
+                long_term_memory=draft_config.long_term_memory,
+                opening_statement=draft_config.opening_statement,
+                opening_questions=draft_config.opening_questions,
+                speech_to_text=draft_config.speech_to_text,
+                text_to_speech=draft_config.text_to_speech,
+                suggested_after_answer=draft_config.suggested_after_answer,
+                review_config=draft_config.review_config,
+                version=0,
+                config_type=AppConfigType.DRAFT,
+            )
+            self.db.session.add(new_draft_config)
+            self.db.session.flush()
+
+            new_app.draft_app_config_id = new_draft_config.id
+        return new_app.id
