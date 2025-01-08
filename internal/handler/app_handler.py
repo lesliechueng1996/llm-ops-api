@@ -14,6 +14,7 @@ from internal.schema.app_schema import (
     GetAppResSchema,
     GetConversationMessagesReqSchema,
     UpdateAppDebugSummaryReqSchema,
+    UpdateAppReqSchema,
 )
 from internal.service import (
     AppService,
@@ -154,3 +155,11 @@ class AppHandler:
     def delete_app(self, app_id: UUID):
         self.app_service.delete_app(app_id, current_user)
         return success_message(f"删除应用成功")
+
+    @login_required
+    def update_app(self, app_id: UUID):
+        req = UpdateAppReqSchema()
+        if not req.validate():
+            return validate_error_json(req.errors)
+        self.app_service.update_app(app_id, current_user, req)
+        return success_message(f"更新应用成功")

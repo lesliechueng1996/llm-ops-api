@@ -111,9 +111,9 @@ class Router:
             "/apps/<uuid:app_id>/conversations/messages",
             view_func=self.app_handler.get_conversation_messages_with_page,
         )
-        # bp.add_url_rule(
-        #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
-        # )
+        bp.add_url_rule(
+            "/app/<uuid:app_id>", methods=["PUT"], view_func=self.app_handler.update_app
+        )
         bp.add_url_rule(
             "/app/<uuid:app_id>",
             methods=["DELETE"],

@@ -17,6 +17,7 @@ from internal.model.conversation import Conversation, Message, MessageAgentThoug
 from internal.schema.app_schema import (
     CreateAppReqSchema,
     GetConversationMessagesReqSchema,
+    UpdateAppReqSchema,
 )
 from internal.service.app_config_serice import AppConfigService
 from internal.service.conversation_service import ConversationService
@@ -238,11 +239,12 @@ class AppService:
             "draft_updated_at": app_config_version.updated_at,
         }
 
-    def update_app(self, id: UUID) -> App:
+    def update_app(self, id: UUID, account: Account, req: UpdateAppReqSchema):
         with self.db.auto_commit():
-            app = self.get_app(id)
-            app.name = "修改后的名字"
-        return app
+            app = self._get_app(id, account)
+            app.name = req.name.data
+            app.icon = req.icon.data
+            app.description = req.description.data or ""
 
     def delete_app(self, id: UUID, account: Account):
         with self.db.auto_commit():

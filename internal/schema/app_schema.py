@@ -105,3 +105,24 @@ class GetConversationMessagesReqSchema(PaginationReq):
         "created_at",
         validators=[Optional(), NumberRange(min=0, message="created_at必须大于等于0")],
     )
+
+
+class UpdateAppReqSchema(FlaskForm):
+    name = StringField(
+        "name",
+        validators=[
+            DataRequired(message="请输入应用名称"),
+            Length(max=40, message="应用名称不能超过40字符"),
+        ],
+    )
+    icon = StringField(
+        "icon",
+        validators=[
+            DataRequired(message="请输入应用图标"),
+            URL(message="应用图标格式不正确"),
+        ],
+    )
+    description = StringField(
+        "description",
+        validators=[Optional(), Length(max=800, message="应用描述不能超过800字符")],
+    )
