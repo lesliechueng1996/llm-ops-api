@@ -208,5 +208,5 @@ class ConversationService:
                 ]:
                     with self.db.auto_commit():
                         message.status = agent_thought.event
-                        message.observation = agent_thought.observation
+                        message.error = agent_thought.observation
                     break
