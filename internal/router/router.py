@@ -22,6 +22,7 @@ from internal.handler import (
     AIHandler,
     ApiKeyHandler,
     OpenapiHandler,
+    BuiltinAppHandler,
 )
 
 
@@ -43,6 +44,7 @@ class Router:
     ai_handler: AIHandler
     api_key_handler: ApiKeyHandler
     openapi_handler: OpenapiHandler
+    builtin_app_handler: BuiltinAppHandler
 
     def register_router(self, app: Flask):
         """注册路由"""
@@ -368,5 +370,12 @@ class Router:
             methods=["POST"],
             view_func=self.openapi_handler.chat,
         )
+
+        # Builtin App
+        bp.add_url_rule(
+            "/builtin-apps/app-categories",
+            view_func=self.builtin_app_handler.get_builtin_app_categories,
+        )
+
         app.register_blueprint(bp)
         app.register_blueprint(openapi_bp)

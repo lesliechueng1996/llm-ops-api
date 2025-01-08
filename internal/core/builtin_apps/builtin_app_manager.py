@@ -46,7 +46,7 @@ class BuiltinAppManager(BaseModel):
 
         current_path = os.path.abspath(__file__)
         parent_path = os.path.dirname(current_path)
-        builtin_apps_yaml_path = os.path.join(parent_path, "builtin_apps")
+        builtin_apps_yaml_path = os.path.join(parent_path, "apps")
 
         for filename in os.listdir(builtin_apps_yaml_path):
             if filename.endswith(".yaml") or filename.endswith(".yml"):
@@ -55,7 +55,11 @@ class BuiltinAppManager(BaseModel):
                 with open(filepath, encoding="utf-8") as f:
                     builtin_app = yaml.safe_load(f)
 
-                builtin_app_entity = BuiltinAppEntity(**builtin_app)
+                language_model_config = builtin_app.get("model_config")
+                builtin_app.pop("model_config")
+                builtin_app_entity = BuiltinAppEntity(
+                    language_model_config=language_model_config, **builtin_app
+                )
                 self.builtin_app_map[builtin_app.get("id")] = builtin_app_entity
 
     def get_categories(self):

@@ -13,7 +13,7 @@ class BuiltinAppEntity(BaseModel):
     name: str = Field(default="")
     icon: str = Field(default="")
     description: str = Field(default="")
-    model_config: dict = Field(
+    language_model_config: dict = Field(
         default_factory=lambda: DEFAULT_APP_CONFIG["model_config"]
     )
     dialog_round: int = Field(default=DEFAULT_APP_CONFIG["dialog_round"])
