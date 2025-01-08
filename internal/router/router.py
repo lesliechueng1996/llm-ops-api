@@ -380,6 +380,11 @@ class Router:
             "/builtin-apps",
             view_func=self.builtin_app_handler.get_builtin_apps,
         )
+        bp.add_url_rule(
+            "/builtin-apps/add-builtin-app-to-space",
+            methods=["POST"],
+            view_func=self.builtin_app_handler.add_builtin_app_to_space,
+        )
 
         app.register_blueprint(bp)
         app.register_blueprint(openapi_bp)
