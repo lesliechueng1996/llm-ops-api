@@ -11,6 +11,8 @@ from internal.schema.app_schema import (
     CreateAppReqSchema,
     FallbackHistoryReqSchema,
     GetAppConfigPublishHistoriesResSchema,
+    GetAppDebugSummaryReqSchema,
+    GetAppDebugSummaryResSchema,
     GetAppResSchema,
     GetConversationMessagesReqSchema,
     UpdateAppDebugSummaryReqSchema,
@@ -163,3 +165,13 @@ class AppHandler:
             return validate_error_json(req.errors)
         self.app_service.update_app(app_id, current_user, req)
         return success_message(f"更新应用成功")
+
+    @login_required
+    def get_apps_pagination(self):
+        req = GetAppDebugSummaryReqSchema(request.args)
+        if not req.validate():
+            return validate_error_json(req.errors)
+
+        result, paginator = self.app_service.get_apps_pagination(req, current_user)
+        schema = GetAppDebugSummaryResSchema(many=True)
+        return success_json(PageModel(schema.dump(result), paginator))

@@ -16,6 +16,7 @@ from internal.model import Account, ApiTool, Dataset, AppConfig
 from internal.model.conversation import Conversation, Message, MessageAgentThought
 from internal.schema.app_schema import (
     CreateAppReqSchema,
+    GetAppDebugSummaryReqSchema,
     GetConversationMessagesReqSchema,
     UpdateAppReqSchema,
 )
@@ -980,3 +981,71 @@ class AppService:
             )
 
         return result, paginator
+
+    def get_apps_pagination(self, req: GetAppDebugSummaryReqSchema, account: Account):
+        paginator = Paginator(self.db, req)
+
+        filters = [App.account_id == account.id]
+        if req.search_word.data:
+            filters.append(App.name.ilike(f"%{req.search_word.data}%"))
+
+        data: list[App] = paginator.paginate(
+            self.db.session.query(App).filter(*filters).order_by(desc("created_at"))
+        )
+
+        app_config_ids = [
+            app.app_config_id
+            for app in data
+            if app.app_config_id and app.status == AppStatus.PUBLISHED
+        ]
+
+        draft_app_config_ids = [
+            app.draft_app_config_id
+            for app in data
+            if app.draft_app_config_id and app.status == AppStatus.DRAFT
+        ]
+
+        app_configs = (
+            self.db.session.query(AppConfig)
+            .filter(AppConfig.id.in_(app_config_ids))
+            .all()
+        )
+        app_config_map = {app_config.id: app_config for app_config in app_configs}
+
+        draft_app_configs = (
+            self.db.session.query(AppConfigVersion)
+            .filter(AppConfigVersion.id.in_(draft_app_config_ids))
+            .all()
+        )
+        draft_app_config_map = {
+            draft_app_config.id: draft_app_config
+            for draft_app_config in draft_app_configs
+        }
+
+        app_dict_list = [
+            {
+                "app": app,
+                "preset_prompt": (
+                    app_config_map.get(app.app_config_id).preset_prompt
+                    if app.app_config_id and app.status == AppStatus.PUBLISHED
+                    else draft_app_config_map.get(app.draft_app_config_id).preset_prompt
+                ),
+                "model": (
+                    app_config_map.get(app.app_config_id).model_config["model"]
+                    if app.app_config_id and app.status == AppStatus.PUBLISHED
+                    else draft_app_config_map.get(app.draft_app_config_id).model_config[
+                        "model"
+                    ]
+                ),
+                "provider": (
+                    app_config_map.get(app.app_config_id).model_config["provider"]
+                    if app.app_config_id and app.status == AppStatus.PUBLISHED
+                    else draft_app_config_map.get(app.draft_app_config_id).model_config[
+                        "provider"
+                    ]
+                ),
+            }
+            for app in data
+        ]
+
+        return app_dict_list, paginator

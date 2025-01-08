@@ -9,7 +9,7 @@ from wtforms import StringField, IntegerField
 from wtforms.validators import DataRequired, Length, URL, Optional, NumberRange
 from marshmallow import Schema, fields, pre_dump
 from internal.lib.helper import datetime_to_timestamp
-from internal.model.app import AppConfigVersion
+from internal.model.app import App, AppConfigVersion
 from pkg.pagination import PaginationReq
 
 
@@ -126,3 +126,41 @@ class UpdateAppReqSchema(FlaskForm):
         "description",
         validators=[Optional(), Length(max=800, message="应用描述不能超过800字符")],
     )
+
+
+class GetAppDebugSummaryReqSchema(PaginationReq):
+    search_word = StringField("search_word", validators=[Optional()])
+
+
+class GetAppDebugSummaryResSchema(Schema):
+    id = fields.UUID()
+    name = fields.String()
+    icon = fields.String()
+    description = fields.String()
+    preset_prompt = fields.String()
+    model_config = fields.Dict()
+    status = fields.String()
+    updated_at = fields.Integer()
+    created_at = fields.Integer()
+
+    @pre_dump
+    def process_data(self, data: dict, **kwargs):
+        app: App = data["app"]
+        preset_prompt: str = data["preset_prompt"]
+        provider: str = data["provider"]
+        model: str = data["model"]
+
+        return {
+            "id": app.id,
+            "name": app.name,
+            "icon": app.icon,
+            "description": app.description or "",
+            "preset_prompt": preset_prompt,
+            "model_config": {
+                "provider": provider,
+                "model": model,
+            },
+            "status": app.status,
+            "updated_at": datetime_to_timestamp(app.updated_at),
+            "created_at": datetime_to_timestamp(app.created_at),
+        }
