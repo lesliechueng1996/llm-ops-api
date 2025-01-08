@@ -376,6 +376,10 @@ class Router:
             "/builtin-apps/app-categories",
             view_func=self.builtin_app_handler.get_builtin_app_categories,
         )
+        bp.add_url_rule(
+            "/builtin-apps",
+            view_func=self.builtin_app_handler.get_builtin_apps,
+        )
 
         app.register_blueprint(bp)
         app.register_blueprint(openapi_bp)
