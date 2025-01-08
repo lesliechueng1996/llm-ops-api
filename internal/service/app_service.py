@@ -244,11 +244,10 @@ class AppService:
             app.name = "修改后的名字"
         return app
 
-    def delete_app(self, id: UUID):
+    def delete_app(self, id: UUID, account: Account):
         with self.db.auto_commit():
-            app = self.get_app(id)
+            app = self._get_app(id, account)
             self.db.session.delete(app)
-        return app
 
     def get_publish_histories(self, app_id: UUID, req: PaginationReq, account: Account):
         self._get_app(app_id, account)

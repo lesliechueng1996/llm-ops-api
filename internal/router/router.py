@@ -114,9 +114,11 @@ class Router:
         # bp.add_url_rule(
         #     "/app/<uuid:id>", methods=["PUT"], view_func=self.app_handler.update_app
         # )
-        # bp.add_url_rule(
-        #     "/app/<uuid:id>", methods=["DELETE"], view_func=self.app_handler.delete_app
-        # )
+        bp.add_url_rule(
+            "/app/<uuid:app_id>",
+            methods=["DELETE"],
+            view_func=self.app_handler.delete_app,
+        )
 
         # built-in tools
         bp.add_url_rule(

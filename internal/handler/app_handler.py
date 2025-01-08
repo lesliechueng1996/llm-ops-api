@@ -149,3 +149,8 @@ class AppHandler:
             app_id, req, current_user
         )
         return success_json(PageModel(result, paginator))
+
+    @login_required
+    def delete_app(self, app_id: UUID):
+        self.app_service.delete_app(app_id, current_user)
+        return success_message(f"删除应用成功")
