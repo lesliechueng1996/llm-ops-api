@@ -184,7 +184,7 @@ class DatasetService:
                 "description": dataset.description,
                 "document_count": document_map.get(dataset.id, (0, 0, 0))[1],
                 "character_count": document_map.get(dataset.id, (0, 0, 0))[2],
-                "related_app_count": app_map.get(dataset.id, 0),
+                "related_app_count": app_map.get(dataset.id, 0)[1],
                 "updated_at": dataset.updated_at,
                 "created_at": dataset.created_at,
             }

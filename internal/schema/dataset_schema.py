@@ -82,8 +82,8 @@ class GetDatasetSchemaRes(Schema):
     def process_data(self, data: dict, **kwargs):
         return {
             **data,
-            "updated_at": int(data["updated_at"].timestamp()),
-            "created_at": int(data["created_at"].timestamp()),
+            "updated_at": datetime_to_timestamp(data["updated_at"]),
+            "created_at": datetime_to_timestamp(data["created_at"]),
         }
 
 
@@ -112,8 +112,8 @@ class GetDatasetsPaginationItemSchemaRes(Schema):
     def process_data(self, data: dict, **kwargs):
         return {
             **data,
-            "updated_at": int(data["updated_at"].timestamp()),
-            "created_at": int(data["created_at"].timestamp()),
+            "updated_at": datetime_to_timestamp(data["updated_at"]),
+            "created_at": datetime_to_timestamp(data["created_at"]),
         }
 
 
