@@ -10,8 +10,20 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class NodeType(str, Enum):
+    START = "start"
+    END = "end"
+    LLM = "llm"
+    CODE = "code"
+    DATASET_RETRIEVAL = "dataset_retrieval"
+    HTTP_REQUEST = "http_request"
+    TEMPLATE_TRANSFORM = "template_transform"
+    TOOL = "tool"
+
+
 class BaseNodeData(BaseModel):
     id: UUID
+    node_type: NodeType
     title: str = ""
     description: str = ""
 

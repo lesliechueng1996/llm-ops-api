@@ -3,3 +3,7 @@
 @Author : Leslie
 @File   : __init__.py
 """
+
+from .end_node import EndNode
+
+__all__ = ["EndNode"]
