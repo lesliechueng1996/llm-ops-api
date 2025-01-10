@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, PrivateAttr, create_model
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.graph import StateGraph
 from langchain_core.runnables.utils import Input
-from .nodes import StartNode, EndNode
+from .nodes import StartNode, EndNode, LLMNode, TemplateTransformNode
 
 
 class Workflow(BaseTool):
@@ -78,6 +78,16 @@ class Workflow(BaseTool):
                 graph.add_node(
                     f"{NodeType.END.value}_{node.get('id')}",
                     EndNode(node_data=node),
+                )
+            elif node.get("node_type") == NodeType.LLM:
+                graph.add_node(
+                    f"{NodeType.LLM.value}_{node.get('id')}",
+                    LLMNode(node_data=node),
+                )
+            elif node.get("node_type") == NodeType.TEMPLATE_TRANSFORM:
+                graph.add_node(
+                    f"{NodeType.TEMPLATE_TRANSFORM.value}_{node.get('id')}",
+                    TemplateTransformNode(node_data=node),
                 )
 
         for edge in edges:
